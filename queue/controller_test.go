@@ -27,12 +27,30 @@ func PerformRequest(r http.Handler, method, path string, body *bytes.Buffer) *ht
 	return w
 }
 
+func TestGetQueues(t *testing.T) {
+	//prepare the queues
+	q := prepareQueue()
+	addQueue(q)
+	router := gin.Default()
+	InitiateRouters(router)
+
+	w := PerformRequest(router, "GET", "/queues/", nil)
+	assert.Equal(t, http.StatusOK, w.Code, "The http code should return 200")
+	var responses []map[string]string
+	json.Unmarshal([]byte(w.Body.String()), &responses)
+	assert.NotNil(t, responses, "It should not return any error message")
+	id, _ := responses[0]["id"]
+	assert.Equal(t, q.ID, id, "The response object should have the same queue id")
+
+}
+
 func TestRequestMessageController(t *testing.T) {
 	//prepare the queues
 	q := prepareQueue()
 	addQueue(q)
 	router := gin.Default()
 	InitiateRouters(router)
+
 	w := PerformRequest(router, "GET", "/queues/"+q.ID+"/messages/request?worker=test-node_127.0.0.1", nil)
 	assert.Equal(t, http.StatusOK, w.Code, "The http code should return 200")
 	var response map[string]string
@@ -60,6 +78,7 @@ func TestUpdateMessageController(t *testing.T) {
 	addQueue(q)
 	router := gin.Default()
 	InitiateRouters(router)
+
 	newMessage := q.Messages[0]
 	newMessage.Status = utility.Enums().Status.Finished
 	postBody, _ := json.Marshal(newMessage)

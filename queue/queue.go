@@ -19,7 +19,7 @@ type queue struct {
 }
 
 //queues returns the global queues
-var queues []*queue
+var queues []queue
 
 //Message is the basic message for Queue
 type message struct {
@@ -49,7 +49,7 @@ func new(name string) (*queue, error) {
 func getQueue(id string) (*queue, error) {
 	for index, queue := range queues {
 		if queue.ID == id {
-			return queues[index], nil
+			return &queues[index], nil
 		}
 	}
 	return nil, errors.New(utility.Enums().ErrorMessages.RecordNotFound)
@@ -62,7 +62,7 @@ func addQueue(queue *queue) error {
 		//err is nil means the record does not exist in GetQuote
 		return errors.New(utility.Enums().ErrorMessages.RecordExist)
 	}
-	queues = append(queues, queue)
+	queues = append(queues, *queue)
 	return nil
 }
 

@@ -11,9 +11,21 @@ import (
 func InitiateRouters(router *gin.Engine) {
 	r := router.Group("/queues/")
 
+	r.GET("/", getQueuesController)
 	r.GET("/:qid/messages/request", requestMessageController)
 
-	r.POST("/:qid/messages/:mid", UpdateMessageController)
+	r.POST("/:qid/messages/:mid", updateMessageController)
+}
+
+//getQueuesController returns all queues
+func getQueuesController(c *gin.Context) {
+	res := make(chan utility.Result)
+	go func() {
+		res <- utility.Result{http.StatusOK, queues}
+		return
+	}()
+	result := <-res
+	c.JSON(result.Expand())
 }
 
 //requestMessageController returns a message to client
@@ -44,8 +56,8 @@ func requestMessageController(c *gin.Context) {
 	c.JSON(result.Expand())
 }
 
-//UpdateMessageController updates the status of the message
-func UpdateMessageController(c *gin.Context) {
+//updateMessageController updates the status of the message
+func updateMessageController(c *gin.Context) {
 	cCp := c.Copy()
 	res := make(chan utility.Result)
 	go func() {
