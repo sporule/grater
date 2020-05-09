@@ -15,8 +15,6 @@ func Enums() enum {
 type enum struct {
 	//HeaderID is where the user id stored in the context
 	Others other
-	//HTTPStatus provides a list of http status code
-	HTTPStatus hTTPStatusStruct
 	//ErrorMessage provides a list of error messages
 	ErrorMessages errorMessage
 	//Roles provides a list of roles
@@ -27,7 +25,6 @@ type enum struct {
 
 //LoadEnums initiates all global variables
 func (enums *enum) LoadEnums() {
-	enums.loadHTTPStatus()
 	enums.loadErrorMessageEnums()
 	enums.loadRoleEnums()
 	enums.loadOtherEnums()
@@ -36,20 +33,9 @@ func (enums *enum) LoadEnums() {
 
 func (enums *enum) loadStatus() {
 	enums.Status.Active = "Active"
-	enums.Status.Finish = "Finish"
+	enums.Status.Finished = "Finished"
 	enums.Status.Running = "Running"
 	enums.Status.Cancelled = "Cancelled"
-}
-
-//LoadHTTPStatus sets the basic HTTPStatus
-func (enums *enum) loadHTTPStatus() {
-	enums.HTTPStatus.OK = 200
-	enums.HTTPStatus.MovedPermanently = 301
-	enums.HTTPStatus.BadRequest = 400
-	enums.HTTPStatus.Unauthorized = 401
-	enums.HTTPStatus.NotFound = 404
-	enums.HTTPStatus.Conflict = 409
-	enums.HTTPStatus.NoContent = 204
 }
 
 //LoadOtherEnums assign values to enums
@@ -94,7 +80,7 @@ type role struct {
 
 //status is the collection of roles
 type status struct {
-	Active, Running, Finish, Cancelled string
+	Active, Running, Finished, Cancelled string
 }
 
 //Other is the struct of uncategorise enums

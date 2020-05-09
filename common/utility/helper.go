@@ -1,6 +1,8 @@
 package utility
 
-import "reflect"
+import (
+	"reflect"
+)
 
 //IsNil checks if all items are empty, it will return true if it is not nil
 func IsNil(items ...interface{}) (result bool) {
@@ -33,4 +35,28 @@ func IsNil(items ...interface{}) (result bool) {
 		}
 	}
 	return result
+}
+
+//GetError returns error message if error is not nil
+func GetError(err error) string {
+	if err == nil {
+		return ""
+	}
+	return err.Error()
+}
+
+//Result is the result struct for c.json
+type Result struct {
+	Code int
+	Obj  interface{}
+}
+
+//Expand expands the result object to fit c.json
+func (result *Result) Expand() (int, interface{}) {
+	return result.Code, result.Obj
+}
+
+//Error is the struct for c.json
+type Error struct {
+	Error string `json:"error,omitempty"`
 }
