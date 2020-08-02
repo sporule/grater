@@ -105,6 +105,7 @@ func TestAddMessageController(t *testing.T) {
 	insertedMessage, err := q.getMessage(message.ID)
 	assert.NotNil(t, insertedMessage, "The inserted Queue should not be empty")
 	assert.Nil(t, err, "It should not return any error message")
+	//:TODO Add functions
 }
 
 func TestUpdateMessageController(t *testing.T) {
