@@ -71,7 +71,7 @@ func TestGetMessageInfo(t *testing.T) {
 
 func TestGetQueue(t *testing.T) {
 	q := prepareQueue()
-	queues = append(queues, *q)
+	queues = append(queues, q)
 	defer cleanEnvironment()
 	queue, err := getQueue(q.ID)
 	assert.Equal(t, q.ID, queue.ID, "It should return the same id")
@@ -90,7 +90,7 @@ func TestAddQueue(t *testing.T) {
 
 func TestCancelQueue(t *testing.T) {
 	q := prepareQueue()
-	queues = append(queues, *q)
+	queues = append(queues, q)
 	err := cancelQueue(q.ID)
 	assert.Nil(t, err, "It should not return an error because it can find the ID")
 	errB := cancelQueue(q.ID)

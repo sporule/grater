@@ -27,21 +27,37 @@ func PerformRequest(r http.Handler, method, path string, body *bytes.Buffer) *ht
 	return w
 }
 
-func TestGetQueues(t *testing.T) {
+func TestGetQueuesController(t *testing.T) {
 	//prepare the queues
 	q := prepareQueue()
 	addQueue(q)
 	router := gin.Default()
-	InitiateRouters(router)
+	rg := router.Group("/queues")
+	InitiateRouters(rg)
 
 	w := PerformRequest(router, "GET", "/queues/", nil)
 	assert.Equal(t, http.StatusOK, w.Code, "The http code should return 200")
 	var responses []map[string]string
 	json.Unmarshal([]byte(w.Body.String()), &responses)
-	assert.NotNil(t, responses, "It should not return any error message")
+	assert.NotNil(t, responses, "The response should not be nil")
 	id, _ := responses[0]["id"]
 	assert.Equal(t, q.ID, id, "The response object should have the same queue id")
+}
 
+func TestAddQueuesController(t *testing.T) {
+
+	router := gin.Default()
+	rg := router.Group("/queues")
+	InitiateRouters(rg)
+
+	//prepare the queues
+	q := prepareQueue()
+	postBody, _ := json.Marshal(*q)
+	w := PerformRequest(router, "POST", "/queues/", bytes.NewBuffer(postBody))
+	assert.Equal(t, http.StatusOK, w.Code, "The http code should return 200")
+	insertedQueue, err := getQueue(q.ID)
+	assert.NotNil(t, insertedQueue, "The inserted Queue should not be empty")
+	assert.Nil(t, err, "It should not return any error message")
 }
 
 func TestRequestMessageController(t *testing.T) {
@@ -49,7 +65,8 @@ func TestRequestMessageController(t *testing.T) {
 	q := prepareQueue()
 	addQueue(q)
 	router := gin.Default()
-	InitiateRouters(router)
+	rg := router.Group("/queues")
+	InitiateRouters(rg)
 
 	w := PerformRequest(router, "GET", "/queues/"+q.ID+"/messages/request?worker=test-node_127.0.0.1", nil)
 	assert.Equal(t, http.StatusOK, w.Code, "The http code should return 200")
@@ -72,12 +89,31 @@ func TestRequestMessageController(t *testing.T) {
 	assert.Equal(t, true, existsC, "It should return error message")
 }
 
+func TestAddMessageController(t *testing.T) {
+	router := gin.Default()
+	rg := router.Group("/queues")
+	InitiateRouters(rg)
+
+	//prepare the queues
+	q := prepareQueue()
+	message := q.Messages[0]
+	q.Messages = nil
+	addQueue(q)
+	postBody, _ := json.Marshal(message)
+	w := PerformRequest(router, "POST", "/queues/"+q.ID+"/messages/", bytes.NewBuffer(postBody))
+	assert.Equal(t, http.StatusOK, w.Code, "The http code should return 200")
+	insertedMessage, err := q.getMessage(message.ID)
+	assert.NotNil(t, insertedMessage, "The inserted Queue should not be empty")
+	assert.Nil(t, err, "It should not return any error message")
+}
+
 func TestUpdateMessageController(t *testing.T) {
 	//prepare the queues
 	q := prepareQueue()
 	addQueue(q)
 	router := gin.Default()
-	InitiateRouters(router)
+	rg := router.Group("/queues")
+	InitiateRouters(rg)
 
 	newMessage := q.Messages[0]
 	newMessage.Status = utility.Enums().Status.Finished
@@ -92,30 +128,3 @@ func TestUpdateMessageController(t *testing.T) {
 	assert.Equal(t, utility.Enums().Status.Finished, q.Messages[0].Status, "The status should be updated to finished")
 
 }
-
-// func TestUpdateMessageController(t *testing.T) {
-// 	//prepare the queues
-// 	q := prepareQueue()
-// 	addQueue(q)
-// 	router := gin.Default()
-// 	InitiateRouters(router)
-// 	w := PerformRequest(router, "POST", "/queues/"+q.ID+"/message?worker=test-node_127.0.0.1")
-// 	assert.Equal(t, http.StatusOK, w.Code, "The http code should return 200")
-// 	var response map[string]string
-// 	err := json.Unmarshal([]byte(w.Body.String()), &response)
-// 	assert.Nil(t, err, "It should not return any error message")
-// 	id, exists := response["id"]
-// 	assert.Equal(t, true, exists, "The response object should have link property")
-// 	testQueue, _ := getQueue(q.ID)
-// 	message, _ := testQueue.getMessageInfo(id)
-// 	assert.Equal(t, "test-node_127.0.0.1", message.Worker, "The worker should not be test-node_127.0.0.1")
-
-// 	//Testing Scenario Queue ID not exist
-// 	wB := PerformRequest(router, "GET", "/queues/test-wrong-id/message?worker=test-node_127.0.0.1")
-// 	var responseB map[string]string
-// 	json.Unmarshal([]byte(wB.Body.String()), &responseB)
-// 	_, existsB := responseB["id"]
-// 	assert.Equal(t, false, existsB, "It should return error message as the id does not exist")
-// 	_, existsC := responseB["error"]
-// 	assert.Equal(t, true, existsC, "It should return error message")
-// }

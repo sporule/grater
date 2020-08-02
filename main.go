@@ -1,13 +1,14 @@
 package main
 
 import (
-	"fmt"
+	"github.com/gin-gonic/gin"
+	"github.com/sporule/grater/manager/apiv1"
 )
 
 func main() {
-	fmt.Println("Hello, World")
-}
 
-func example() string {
-	return "Hello, World"
+	router := gin.Default()
+	apiv1.RegisterAPIRoutes(router)
+
+	router.Run()
 }
