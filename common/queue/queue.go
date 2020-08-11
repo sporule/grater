@@ -80,10 +80,10 @@ func cancelQueue(id string) error {
 }
 
 //addMessage adds a new message into the queue
-func (q *queue) addMessage(link, database, table string) error {
+func (q *queue) addMessage(link, database, table string) (*message, error) {
 	id, _ := uuid.NewRandom()
 	if utility.IsNil(link, database, table) {
-		return errors.New(utility.Enums().ErrorMessages.LackOfInfo)
+		return nil, errors.New(utility.Enums().ErrorMessages.LackOfInfo)
 	}
 	msg := &message{
 		ID:         id.String(),
@@ -94,7 +94,7 @@ func (q *queue) addMessage(link, database, table string) error {
 		LastUpdate: time.Now(),
 	}
 	q.Messages = append(q.Messages, *msg)
-	return nil
+	return msg, nil
 }
 
 //updateMessage updates the message, currently only support update status

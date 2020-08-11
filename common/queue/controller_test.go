@@ -102,10 +102,12 @@ func TestAddMessageController(t *testing.T) {
 	postBody, _ := json.Marshal(message)
 	w := PerformRequest(router, "POST", "/queues/"+q.ID+"/messages/", bytes.NewBuffer(postBody))
 	assert.Equal(t, http.StatusOK, w.Code, "The http code should return 200")
-	insertedMessage, err := q.getMessage(message.ID)
+	var response map[string]string
+	err := json.Unmarshal([]byte(w.Body.String()), &response)
+	id, _ := response["id"]
+	insertedMessage, err := q.getMessage(id)
 	assert.NotNil(t, insertedMessage, "The inserted Queue should not be empty")
 	assert.Nil(t, err, "It should not return any error message")
-	//:TODO Add functions
 }
 
 func TestUpdateMessageController(t *testing.T) {
