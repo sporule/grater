@@ -93,7 +93,7 @@ func updateMessageController(c *gin.Context) {
 			res <- utility.Result{Code: http.StatusOK, Obj: &utility.Error{Error: utility.Enums().ErrorMessages.RecordNotFound}}
 			return
 		}
-		var newMessage message
+		var newMessage Message
 		bodyErr := cCp.BindJSON(&newMessage)
 		if bodyErr != nil {
 			res <- utility.Result{Code: http.StatusOK, Obj: &utility.Error{Error: utility.Enums().ErrorMessages.LackOfInfo}}
@@ -126,7 +126,7 @@ func addMessageController(c *gin.Context) {
 			res <- utility.Result{Code: http.StatusOK, Obj: &utility.Error{Error: utility.Enums().ErrorMessages.RecordNotFound}}
 			return
 		}
-		var newMessage message
+		var newMessage Message
 		bodyErr := cCp.BindJSON(&newMessage)
 		if bodyErr != nil {
 			res <- utility.Result{Code: http.StatusOK, Obj: &utility.Error{Error: utility.Enums().ErrorMessages.LackOfInfo}}

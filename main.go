@@ -1,14 +1,26 @@
 package main
 
 import (
-	"github.com/gin-gonic/gin"
-	"github.com/sporule/grater/manager/apiv1"
+	"log"
+	"time"
+
+	"github.com/sporule/grater/common/queue"
+	"github.com/sporule/grater/common/utility"
+	"github.com/sporule/grater/scraper"
 )
 
 func main() {
 
-	router := gin.Default()
-	apiv1.RegisterAPIRoutes(router)
-
-	router.Run()
+	msg := &queue.Message{
+		ID:         "1",
+		Link:       "https://bromleyplumbersltd.co.uk/services/drainage-waste/",
+		Database:   "database",
+		Table:      "table",
+		Status:     utility.Enums().Status.Active,
+		LastUpdate: time.Now(),
+	}
+	s, _ := scraper.New(msg)
+	s.Collector.Visit(msg.Link)
+	s.Collector.Wait()
+	log.Println(s)
 }

@@ -14,17 +14,18 @@ type queue struct {
 	ID       string    `json:"id,omitempty"`
 	Name     string    `json:"name,omitempty"`
 	Status   string    `json:"status,omitempty"`
-	Messages []message `json:"messages,omitempty"`
+	Messages []Message `json:"messages,omitempty"`
 	mux      sync.Mutex
 }
 
 //queues returns the global queues
 var queues []*queue
 
-//Message is the basic message for Queue
-type message struct {
+//Message is the basic Message for Queue
+type Message struct {
 	ID         string `json:"id,omitempty"`
 	Link       string `json:"link,omitempty"`
+	Pattern    string `json:"pattern,omitempty"`
 	Database   string `json:"database,omitempty"`
 	Table      string `json:"table,omitempty"`
 	Status     string `json:"status,omitempty"`
@@ -80,12 +81,12 @@ func cancelQueue(id string) error {
 }
 
 //addMessage adds a new message into the queue
-func (q *queue) addMessage(link, database, table string) (*message, error) {
+func (q *queue) addMessage(link, database, table string) (*Message, error) {
 	id, _ := uuid.NewRandom()
 	if utility.IsNil(link, database, table) {
 		return nil, errors.New(utility.Enums().ErrorMessages.LackOfInfo)
 	}
-	msg := &message{
+	msg := &Message{
 		ID:         id.String(),
 		Link:       link,
 		Database:   database,
@@ -98,7 +99,7 @@ func (q *queue) addMessage(link, database, table string) (*message, error) {
 }
 
 //updateMessage updates the message, currently only support update status
-func (q *queue) updateMessage(id string, newMessage *message) (*message, error) {
+func (q *queue) updateMessage(id string, newMessage *Message) (*Message, error) {
 	q.mux.Lock()
 	for index, msg := range q.Messages {
 		if msg.ID == id {
@@ -113,7 +114,7 @@ func (q *queue) updateMessage(id string, newMessage *message) (*message, error) 
 }
 
 //allocateMessage returns the first active message
-func (q *queue) allocateMessage(worker string) (*message, error) {
+func (q *queue) allocateMessage(worker string) (*Message, error) {
 	q.mux.Lock()
 	for index, msg := range q.Messages {
 		if msg.Status == utility.Enums().Status.Active {
@@ -128,7 +129,7 @@ func (q *queue) allocateMessage(worker string) (*message, error) {
 }
 
 //getMessage returns the first active message
-func (q *queue) getMessage(id string) (*message, error) {
+func (q *queue) getMessage(id string) (*Message, error) {
 	for _, msg := range q.Messages {
 		if msg.ID == id {
 			return &msg, nil
