@@ -13,10 +13,10 @@ import (
 func prepareQueue() *queue {
 	id, _ := uuid.NewRandom()
 	q := &queue{Name: "test", ID: id.String(), Status: utility.Enums().Status.Active}
-	link, database, table := "https://google.co.uk", "grater", "test"
-	q.addMessage(link, database, table)
-	q.addMessage(link, database, table)
-	q.addMessage(link, database, table)
+	link := "https://www.sproule.com"
+	q.addMessage(link)
+	q.addMessage(link)
+	q.addMessage(link)
 	q.Messages[0].Status = utility.Enums().Status.Cancelled
 	return q
 }
@@ -28,12 +28,27 @@ func cleanEnvironment() {
 
 func TestAddMessage(t *testing.T) {
 	q := &queue{Name: "test"}
-	link, database, table := "https://google.co.uk", "grater", "test"
-	q.addMessage(link, database, table)
+	link := "https://www.sproule.com"
+	q.addMessage(link)
 	assert.Equal(t, 1, len(q.Messages), "Queue should contain 1 message")
 	assert.NotNil(t, q.Messages[0].ID, "Message id should not be empty")
-	assert.NotNil(t, q.Messages[0].Link, "Message Link should not be empty")
-	assert.NotNil(t, q.Messages[0].LastUpdate, "Message LastUpdate should not be empty")
+}
+
+func TestNewQueue(t *testing.T) {
+	q, err := new("Test", "a[href]", "mongodb")
+	assert.Nil(t, err, "It should not return error")
+	assert.Equal(t, "Test", q.Name, "The queue name should match")
+	q, err = new("Test", "", "")
+	assert.NotNil(t, err, "It should return error as it can't be nil")
+}
+
+func TestAddMessages(t *testing.T) {
+	q := &queue{Name: "test"}
+	links := []string{"https://www.sproule.com", "https://www.sproule.com", "https://www.sproule.com"}
+	q.addMessages(links)
+	assert.Equal(t, 3, len(q.Messages), "Queue should contain 3 message")
+	assert.NotNil(t, q.Messages[0].ID, "Message id should not be empty")
+	assert.NotNil(t, q.Messages[1].ID, "Message id should not be empty")
 }
 
 func TestUpdateMessage(t *testing.T) {
@@ -48,7 +63,7 @@ func TestUpdateMessage(t *testing.T) {
 	assert.Equal(t, errors.New(utility.Enums().ErrorMessages.RecordNotFound), errC, "Error should not be record not found as the id is fake")
 }
 
-func TestGetMessage(t *testing.T) {
+func TestAllocateMessage(t *testing.T) {
 	q := prepareQueue()
 	msg, err := q.allocateMessage("worker1")
 	assert.Nil(t, err, "It should not return any error")
@@ -58,6 +73,20 @@ func TestGetMessage(t *testing.T) {
 	msg, errB := q.allocateMessage("worker2")
 	assert.NotNil(t, errB, "It should return an error because there is no item in message queue")
 	assert.Nil(t, msg, "It should not return any message as there is only 3 message in the queue")
+
+}
+
+func TestAllocateMessages(t *testing.T) {
+	q := prepareQueue()
+	msgs, err := q.allocateMessages("worker1", 3)
+	assert.Nil(t, err, "It should not return any error")
+	assert.NotNil(t, msgs, "It should return messages")
+	assert.Equal(t, 2, len(msgs), "It should only return 2 messages although asking for 3 because there are only 2 Active messages")
+	assert.Equal(t, "worker1", msgs[0].Worker, "The message should contain worker information")
+	assert.Equal(t, "worker1", msgs[1].Worker, "The message should contain worker information")
+	msgsB, errB := q.allocateMessages("worker2", 2)
+	assert.NotNil(t, errB, "It should return an error because there is no item in message queue")
+	assert.Nil(t, msgsB, "It should not return any message as there is only 3 message in the queue")
 
 }
 

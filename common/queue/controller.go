@@ -132,7 +132,7 @@ func addMessageController(c *gin.Context) {
 			res <- utility.Result{Code: http.StatusOK, Obj: &utility.Error{Error: utility.Enums().ErrorMessages.LackOfInfo}}
 			return
 		}
-		insertedMessage, umErr := q.addMessage(newMessage.Link, newMessage.Database, newMessage.Table)
+		insertedMessage, umErr := q.addMessage(newMessage.Link)
 		if umErr != nil {
 			res <- utility.Result{Code: http.StatusOK, Obj: &utility.Error{Error: umErr.Error()}}
 			return

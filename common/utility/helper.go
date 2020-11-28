@@ -29,7 +29,7 @@ func IsNil(items ...interface{}) (result bool) {
 			//return false by default
 			result = false
 		}
-		if !result {
+		if result {
 			//return the result directly if the result is true
 			return result
 		}

@@ -1,0 +1,24 @@
+{
+	"product-meta":{
+		pattern:"div[data-asin][data-component-type=s-search-result]",
+		value:"",
+		children:{
+			"name":{
+				pattern:"span.a-size-base-plus.a-color-base.a-text-normal",
+				value:"text"
+			},
+			"image":{
+				pattern:"img[data-image-latency=s-product-image]",
+				value:"attr:src"
+			},
+			"url":{
+				pattern:"a[class=a-link-normal a-text-normal]",
+				value:"attr:href"
+			}
+		}
+	},
+	"page":{
+		pattern:"ul.a-pagination>li.a-selected>a",
+		value:"text"
+	}
+}

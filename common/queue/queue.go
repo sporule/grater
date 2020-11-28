@@ -11,11 +11,13 @@ import (
 
 //Queue is the struct for queues
 type queue struct {
-	ID       string    `json:"id,omitempty"`
-	Name     string    `json:"name,omitempty"`
-	Status   string    `json:"status,omitempty"`
-	Messages []Message `json:"messages,omitempty"`
-	mux      sync.Mutex
+	ID             string    `json:"id,omitempty"`
+	Name           string    `json:"name,omitempty"`
+	Status         string    `json:"status,omitempty"`
+	Pattern        string    `json:"pattern,omitempty"`
+	TargetLocation string    `json:"database,omitempty"`
+	Messages       []Message `json:"messages,omitempty"`
+	mux            sync.Mutex
 }
 
 //queues returns the global queues
@@ -25,24 +27,23 @@ var queues []*queue
 type Message struct {
 	ID         string `json:"id,omitempty"`
 	Link       string `json:"link,omitempty"`
-	Pattern    string `json:"pattern,omitempty"`
-	Database   string `json:"database,omitempty"`
-	Table      string `json:"table,omitempty"`
 	Status     string `json:"status,omitempty"`
 	Worker     string `json:"worker,omitempty"`
 	LastUpdate time.Time
 }
 
-//New creates a new queue
-func new(name string) (*queue, error) {
-	if utility.IsNil(name) {
+//new creates a new queue
+func new(name, pattern, targetLocation string) (*queue, error) {
+	if utility.IsNil(name, pattern, targetLocation) {
 		return nil, errors.New(utility.Enums().ErrorMessages.LackOfInfo)
 	}
 	id, _ := uuid.NewRandom()
 	return &queue{
-		Name:   name,
-		ID:     id.String(),
-		Status: utility.Enums().Status.Active,
+		Name:           name,
+		ID:             id.String(),
+		Status:         utility.Enums().Status.Active,
+		Pattern:        pattern,
+		TargetLocation: targetLocation,
 	}, nil
 }
 
@@ -81,21 +82,37 @@ func cancelQueue(id string) error {
 }
 
 //addMessage adds a new message into the queue
-func (q *queue) addMessage(link, database, table string) (*Message, error) {
+func (q *queue) addMessage(link string) (*Message, error) {
 	id, _ := uuid.NewRandom()
-	if utility.IsNil(link, database, table) {
+	if utility.IsNil(link) {
 		return nil, errors.New(utility.Enums().ErrorMessages.LackOfInfo)
 	}
 	msg := &Message{
 		ID:         id.String(),
 		Link:       link,
-		Database:   database,
-		Table:      table,
 		Status:     utility.Enums().Status.Active,
 		LastUpdate: time.Now(),
 	}
 	q.Messages = append(q.Messages, *msg)
 	return msg, nil
+}
+
+//addMessages adds a new message into the queue
+func (q *queue) addMessages(links []string) error {
+	for _, link := range links {
+		id, _ := uuid.NewRandom()
+		if utility.IsNil(link) {
+			return errors.New(utility.Enums().ErrorMessages.LackOfInfo)
+		}
+		msg := &Message{
+			ID:         id.String(),
+			Link:       link,
+			Status:     utility.Enums().Status.Active,
+			LastUpdate: time.Now(),
+		}
+		q.Messages = append(q.Messages, *msg)
+	}
+	return nil
 }
 
 //updateMessage updates the message, currently only support update status
@@ -125,6 +142,24 @@ func (q *queue) allocateMessage(worker string) (*Message, error) {
 		}
 	}
 	q.mux.Unlock()
+	return nil, errors.New(utility.Enums().ErrorMessages.RecordNotFound)
+}
+
+//allocateMessages returns the active messages
+func (q *queue) allocateMessages(worker string, size int) ([]*Message, error) {
+	q.mux.Lock()
+	messages := []*Message{}
+	for index, msg := range q.Messages {
+		if msg.Status == utility.Enums().Status.Active {
+			q.Messages[index].Status = utility.Enums().Status.Running
+			q.Messages[index].Worker = worker
+			messages = append(messages, &q.Messages[index])
+		}
+	}
+	q.mux.Unlock()
+	if len(messages) > 0 {
+		return messages, nil
+	}
 	return nil, errors.New(utility.Enums().ErrorMessages.RecordNotFound)
 }
 
