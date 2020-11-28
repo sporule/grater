@@ -11,12 +11,13 @@ import (
 
 //Queue is the struct for queues
 type queue struct {
-	ID             string    `json:"id,omitempty"`
-	Name           string    `json:"name,omitempty"`
-	Status         string    `json:"status,omitempty"`
-	Pattern        string    `json:"pattern,omitempty"`
-	TargetLocation string    `json:"database,omitempty"`
-	Messages       []Message `json:"messages,omitempty"`
+	ID             string                 `json:"id,omitempty"`
+	Name           string                 `json:"name,omitempty"`
+	Status         string                 `json:"status,omitempty"`
+	Pattern        map[string]interface{} `json:"pattern,omitempty"`
+	Priority       int                    `json:"priorty,omitempty"`
+	TargetLocation string                 `json:"database,omitempty"`
+	Messages       []Message
 	mux            sync.Mutex
 }
 
@@ -33,7 +34,7 @@ type Message struct {
 }
 
 //new creates a new queue
-func new(name, pattern, targetLocation string) (*queue, error) {
+func new(name, targetLocation string, pattern map[string]interface{}) (*queue, error) {
 	if utility.IsNil(name, pattern, targetLocation) {
 		return nil, errors.New(utility.Enums().ErrorMessages.LackOfInfo)
 	}

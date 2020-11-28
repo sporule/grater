@@ -60,7 +60,7 @@ func TestAddQueuesController(t *testing.T) {
 	assert.Nil(t, err, "It should not return any error message")
 }
 
-func TestRequestMessageController(t *testing.T) {
+func TestRequestMessagesController(t *testing.T) {
 	//prepare the queues
 	q := prepareQueue()
 	addQueue(q)
@@ -70,10 +70,10 @@ func TestRequestMessageController(t *testing.T) {
 
 	w := PerformRequest(router, "GET", "/queues/"+q.ID+"/messages/request?worker=test-node_127.0.0.1", nil)
 	assert.Equal(t, http.StatusOK, w.Code, "The http code should return 200")
-	var response map[string]string
-	err := json.Unmarshal([]byte(w.Body.String()), &response)
+	var responses []map[string]string
+	err := json.Unmarshal([]byte(w.Body.String()), &responses)
 	assert.Nil(t, err, "It should not return any error message")
-	id, exists := response["id"]
+	id, exists := responses[0]["id"]
 	assert.Equal(t, true, exists, "The response object should have id property")
 	testQueue, _ := getQueue(q.ID)
 	message, _ := testQueue.getMessage(id)

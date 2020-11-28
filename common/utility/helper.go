@@ -1,6 +1,8 @@
 package utility
 
 import (
+	"encoding/json"
+	"io/ioutil"
 	"reflect"
 )
 
@@ -59,4 +61,16 @@ func (result *Result) Expand() (int, interface{}) {
 //Error is the struct for c.json
 type Error struct {
 	Error string `json:"error,omitempty"`
+}
+
+//Config returns the global config
+var Config map[string]string
+
+func LoadConfiguration(filepath string) (err error) {
+	content, err := ioutil.ReadFile(filepath)
+	if err == nil {
+		err = json.Unmarshal(content, &Config)
+		return err
+	}
+	return err
 }

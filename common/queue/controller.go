@@ -2,6 +2,7 @@ package queue
 
 import (
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/sporule/grater/common/utility"
@@ -15,7 +16,7 @@ func InitiateRouters(r *gin.RouterGroup) {
 	r.POST("/", addQueueController)
 
 	//Message Management
-	r.GET("/:qid/messages/request", requestMessageController)
+	r.GET("/:qid/messages/request", requestMessagesController)
 	r.POST("/:qid/messages/:mid", updateMessageController)
 	r.POST("/:qid/messages/", addMessageController)
 }
@@ -53,13 +54,19 @@ func addQueueController(c *gin.Context) {
 	c.JSON(result.Expand())
 }
 
-//requestMessageController returns a message to client
-func requestMessageController(c *gin.Context) {
+//requestMessagesController returns a message to client
+func requestMessagesController(c *gin.Context) {
 	cCp := c.Copy()
 	res := make(chan utility.Result)
 	go func() {
 		qID := cCp.Param("qid")
 		worker := cCp.DefaultQuery("worker", "")
+		sizeStr := cCp.DefaultQuery("size", "30")
+		size, err := strconv.Atoi(sizeStr)
+		if err != nil {
+			res <- utility.Result{Code: http.StatusOK, Obj: &utility.Error{Error: utility.Enums().ErrorMessages.SystemError}}
+			return
+		}
 		if worker == "" {
 			res <- utility.Result{Code: http.StatusOK, Obj: &utility.Error{Error: "Could not identify the worker"}}
 			return
@@ -69,12 +76,12 @@ func requestMessageController(c *gin.Context) {
 			res <- utility.Result{Code: http.StatusOK, Obj: &utility.Error{Error: utility.Enums().ErrorMessages.RecordNotFound}}
 			return
 		}
-		msg, msgErr := q.allocateMessage(worker)
+		msgs, msgErr := q.allocateMessages(worker, size)
 		if msgErr != nil {
 			res <- utility.Result{Code: http.StatusOK, Obj: &utility.Error{Error: utility.Enums().ErrorMessages.RecordNotFound}}
 			return
 		}
-		res <- utility.Result{Code: http.StatusOK, Obj: msg}
+		res <- utility.Result{Code: http.StatusOK, Obj: msgs}
 		return
 	}()
 	result := <-res
