@@ -18,7 +18,7 @@ func InitiateRouters(r *gin.RouterGroup) {
 	//Message Management
 	r.GET("/:qid/messages/request", requestMessagesController)
 	r.POST("/:qid/messages/:mid", updateMessageController)
-	r.POST("/:qid/messages/", addMessageController)
+	r.POST("/:qid/messages/", addMessagesController)
 }
 
 //getQueuesController returns all queues
@@ -123,7 +123,7 @@ func updateMessageController(c *gin.Context) {
 }
 
 //addMessageController adds the message to the queue
-func addMessageController(c *gin.Context) {
+func addMessagesController(c *gin.Context) {
 	cCp := c.Copy()
 	res := make(chan utility.Result)
 	go func() {
@@ -133,18 +133,20 @@ func addMessageController(c *gin.Context) {
 			res <- utility.Result{Code: http.StatusOK, Obj: &utility.Error{Error: utility.Enums().ErrorMessages.RecordNotFound}}
 			return
 		}
-		var newMessage Message
-		bodyErr := cCp.BindJSON(&newMessage)
+		var newMessages []Message
+		bodyErr := cCp.BindJSON(&newMessages)
 		if bodyErr != nil {
 			res <- utility.Result{Code: http.StatusOK, Obj: &utility.Error{Error: utility.Enums().ErrorMessages.LackOfInfo}}
 			return
 		}
-		insertedMessage, umErr := q.addMessage(newMessage.Link)
-		if umErr != nil {
-			res <- utility.Result{Code: http.StatusOK, Obj: &utility.Error{Error: umErr.Error()}}
-			return
+		for _, newMessage := range newMessages {
+			_, umErr := q.addMessage(newMessage.Link)
+			if umErr != nil {
+				res <- utility.Result{Code: http.StatusOK, Obj: &utility.Error{Error: umErr.Error()}}
+				return
+			}
 		}
-		res <- utility.Result{Code: http.StatusOK, Obj: insertedMessage}
+		res <- utility.Result{Code: http.StatusOK, Obj: nil}
 	}()
 	result := <-res
 	c.JSON(result.Expand())

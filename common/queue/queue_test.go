@@ -1,7 +1,6 @@
 package queue
 
 import (
-	"encoding/json"
 	"errors"
 	"testing"
 
@@ -36,13 +35,10 @@ func TestAddMessage(t *testing.T) {
 }
 
 func TestNewQueue(t *testing.T) {
-	var pattern map[string]interface{}
-	patternStr := `{"page":{"pattern":"ul.a-pagination>li.a-selected>a","value":"text"}}`
-	json.Unmarshal([]byte(patternStr), &pattern)
-	q, err := new("Test", "a[href]", pattern)
+	q, err := new("Test", "a[href]", `{"page":{"pattern":"ul.a-pagination>li.a-selected>a","value":"text"}}`)
 	assert.Nil(t, err, "It should not return error")
 	assert.Equal(t, "Test", q.Name, "The queue name should match")
-	q, err = new("Test", "", nil)
+	q, err = new("Test", "", "")
 	assert.NotNil(t, err, "It should return error as it can't be nil")
 }
 

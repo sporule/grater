@@ -3,6 +3,7 @@ package queue
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -53,6 +54,8 @@ func TestAddQueuesController(t *testing.T) {
 	//prepare the queues
 	q := prepareQueue()
 	postBody, _ := json.Marshal(*q)
+	body := string(postBody)
+	fmt.Println(body)
 	w := PerformRequest(router, "POST", "/queues/", bytes.NewBuffer(postBody))
 	assert.Equal(t, http.StatusOK, w.Code, "The http code should return 200")
 	insertedQueue, err := getQueue(q.ID)
@@ -89,24 +92,21 @@ func TestRequestMessagesController(t *testing.T) {
 	assert.Equal(t, true, existsC, "It should return error message")
 }
 
-func TestAddMessageController(t *testing.T) {
+func TestAddMessagesController(t *testing.T) {
 	router := gin.Default()
 	rg := router.Group("/queues")
 	InitiateRouters(rg)
 
 	//prepare the queues
 	q := prepareQueue()
-	message := q.Messages[0]
+	messages := q.Messages
 	q.Messages = nil
 	addQueue(q)
-	postBody, _ := json.Marshal(message)
+	postBody, _ := json.Marshal(messages)
 	w := PerformRequest(router, "POST", "/queues/"+q.ID+"/messages/", bytes.NewBuffer(postBody))
 	assert.Equal(t, http.StatusOK, w.Code, "The http code should return 200")
 	var response map[string]string
 	err := json.Unmarshal([]byte(w.Body.String()), &response)
-	id, _ := response["id"]
-	insertedMessage, err := q.getMessage(id)
-	assert.NotNil(t, insertedMessage, "The inserted Queue should not be empty")
 	assert.Nil(t, err, "It should not return any error message")
 }
 

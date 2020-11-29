@@ -11,12 +11,12 @@ import (
 
 //Queue is the struct for queues
 type queue struct {
-	ID             string                 `json:"id,omitempty"`
-	Name           string                 `json:"name,omitempty"`
-	Status         string                 `json:"status,omitempty"`
-	Pattern        map[string]interface{} `json:"pattern,omitempty"`
-	Priority       int                    `json:"priorty,omitempty"`
-	TargetLocation string                 `json:"database,omitempty"`
+	ID             string `json:"id,omitempty"`
+	Name           string `json:"name,omitempty"`
+	Status         string `json:"status,omitempty"`
+	Pattern        string `json:"pattern,omitempty"`
+	Priority       int    `json:"priorty,omitempty"`
+	TargetLocation string `json:"targetLocation,omitempty"`
 	Messages       []Message
 	mux            sync.Mutex
 }
@@ -34,7 +34,7 @@ type Message struct {
 }
 
 //new creates a new queue
-func new(name, targetLocation string, pattern map[string]interface{}) (*queue, error) {
+func new(name, targetLocation string, pattern string) (*queue, error) {
 	if utility.IsNil(name, pattern, targetLocation) {
 		return nil, errors.New(utility.Enums().ErrorMessages.LackOfInfo)
 	}
@@ -150,11 +150,16 @@ func (q *queue) allocateMessage(worker string) (*Message, error) {
 func (q *queue) allocateMessages(worker string, size int) ([]*Message, error) {
 	q.mux.Lock()
 	messages := []*Message{}
+	counter := 0
 	for index, msg := range q.Messages {
+		if counter >= size {
+			break
+		}
 		if msg.Status == utility.Enums().Status.Active {
 			q.Messages[index].Status = utility.Enums().Status.Running
 			q.Messages[index].Worker = worker
 			messages = append(messages, &q.Messages[index])
+			counter += 1
 		}
 	}
 	q.mux.Unlock()
