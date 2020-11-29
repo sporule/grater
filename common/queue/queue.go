@@ -6,6 +6,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+
+	"github.com/sporule/grater/common/database"
 	"github.com/sporule/grater/common/utility"
 )
 
@@ -17,8 +19,9 @@ type queue struct {
 	Pattern        string     `json:"pattern,omitempty"`
 	Priority       int        `json:"priorty,omitempty"`
 	TargetLocation string     `json:"targetLocation,omitempty"`
-	Messages       []Message  `json:"-"`
+	Messages       []Message  `bson:"messages,omitempty" json:"-"`
 	mux            sync.Mutex `json:"-"`
+	tableName      string     `bson:"-" json:"-"`
 }
 
 //queues returns the global queues
@@ -32,6 +35,11 @@ type Message struct {
 	Worker     string `json:"worker,omitempty"`
 	LastUpdate time.Time
 }
+
+const (
+	//TableName is the table name of this package
+	TableName = "queue"
+)
 
 //new creates a new queue
 func new(name, targetLocation string, pattern string) (*queue, error) {
@@ -56,6 +64,11 @@ func getQueue(id string) (*queue, error) {
 		}
 	}
 	return nil, errors.New(utility.Enums().ErrorMessages.RecordNotFound)
+}
+
+func InsertQueue() error {
+	q, _ := new("test", "target", "pattern")
+	return database.DBInstance.InsertOne(TableName, q)
 }
 
 //addQueue add a new queue to the queues

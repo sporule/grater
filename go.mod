@@ -1,6 +1,6 @@
 module github.com/sporule/grater
 
-go 1.15
+go 1.14
 
 require (
 	github.com/PuerkitoBio/goquery v1.6.0
@@ -26,6 +26,7 @@ require (
 	github.com/stretchr/testify v1.6.1
 	github.com/temoto/robotstxt v1.1.1 // indirect
 	github.com/ugorji/go v1.2.0 // indirect
+	go.mongodb.org/mongo-driver v1.4.3
 	golang.org/x/crypto v0.0.0-20201124201722-c8d3bf9c5392 // indirect
 	golang.org/x/net v0.0.0-20201110031124-69a78807bb2b // indirect
 	golang.org/x/sys v0.0.0-20201126233918-771906719818 // indirect

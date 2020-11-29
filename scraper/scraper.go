@@ -6,6 +6,8 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
+
 	"runtime"
 	"strconv"
 	"strings"
@@ -35,6 +37,7 @@ func new() (*scraper, error) {
 	}, nil
 }
 
+//StartScraping fires of the scraping process
 func StartScraping(size int) error {
 	log.Println("Scraper started")
 	scraper, _ := new()
@@ -58,7 +61,7 @@ func getProxies(api string) []string {
 }
 
 func (scraper *scraper) getQueue() error {
-	if api := utility.Config["DistributorAPI"]; !utility.IsNil(api) {
+	if api := os.Getenv("DISTRIBUTOR_API"); !utility.IsNil(api) {
 		//obtain the highest priority queue
 		res, err := http.Get(api + "/queues/")
 		if err != nil {
@@ -170,7 +173,7 @@ func parsePattern(s *goquery.Selection, item map[string]interface{}) map[string]
 }
 
 func (scraper *scraper) scrape(size int) error {
-	if api := utility.Config["DistributorAPI"]; !utility.IsNil(api) {
+	if api := os.Getenv("DISTRIBUTOR_API"); !utility.IsNil(api) {
 		//obtain the messages
 		res, err := http.Get(api + "/queues/" + scraper.Queue["id"].(string) + "/messages/request?worker=" + scraper.ID + "&size=" + strconv.Itoa(size))
 		if err != nil {

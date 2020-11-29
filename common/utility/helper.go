@@ -66,6 +66,7 @@ type Error struct {
 //Config returns the global config
 var Config map[string]string
 
+//LoadConfiguration loads json configuration
 func LoadConfiguration(filepath string) (err error) {
 	content, err := ioutil.ReadFile(filepath)
 	if err == nil {
