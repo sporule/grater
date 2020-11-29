@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"go.mongodb.org/mongo-driver/bson"
 
 	"github.com/sporule/grater/common/database"
 	"github.com/sporule/grater/common/utility"
@@ -13,13 +14,13 @@ import (
 
 //Queue is the struct for queues
 type queue struct {
-	ID             string     `json:"id,omitempty"`
+	ID             string     `bson:"_id" json:"id,omitempty"`
 	Name           string     `json:"name,omitempty"`
 	Status         string     `json:"status,omitempty"`
 	Pattern        string     `json:"pattern,omitempty"`
 	Priority       int        `json:"priorty,omitempty"`
 	TargetLocation string     `json:"targetLocation,omitempty"`
-	Messages       []Message  `bson:"messages,omitempty" json:"-"`
+	Messages       []Message  `bson:"-" json:"-"`
 	mux            sync.Mutex `json:"-"`
 	tableName      string     `bson:"-" json:"-"`
 }
@@ -56,6 +57,14 @@ func new(name, targetLocation string, pattern string) (*queue, error) {
 	}, nil
 }
 
+//GetQueues returns all queues
+//TODO: Finish GetQueues
+func GetQueues() ([]queue, error) {
+	var queues []queue
+	err := database.Client.GetAll(TableName, &queues, bson.M{}, 0, 30)
+	return queues, err
+}
+
 //getQueue returns queue from the global queues
 func getQueue(id string) (*queue, error) {
 	for _, queue := range queues {
@@ -64,11 +73,6 @@ func getQueue(id string) (*queue, error) {
 		}
 	}
 	return nil, errors.New(utility.Enums().ErrorMessages.RecordNotFound)
-}
-
-func InsertQueue() error {
-	q, _ := new("test", "target", "pattern")
-	return database.DBInstance.InsertOne(TableName, q)
 }
 
 //addQueue add a new queue to the queues

@@ -23,11 +23,6 @@ func (db *MongoDB) Connect(uri, databaseName string) error {
 	if err != nil {
 		return err
 	}
-	defer func() {
-		if err = client.Disconnect(ctx); err != nil {
-			log.Panic(err)
-		}
-	}()
 	if err := client.Ping(context.TODO(), readpref.Primary()); err != nil {
 		// Can't connect to Mongo server
 		log.Fatal("Can't connect to Mongo server ", err)
@@ -42,7 +37,7 @@ func (db *MongoDB) GetOne(table string, item, filter interface{}) error {
 }
 
 //GetAll returns all result
-func (db *MongoDB) GetAll(table string, items, filter interface{}, skip, limit int64) error {
+func (db *MongoDB) GetAll(table string, items interface{}, filter interface{}, skip, limit int64) error {
 	options := &options.FindOptions{}
 	options.SetSkip(skip)
 	options.SetLimit(limit)
@@ -50,7 +45,7 @@ func (db *MongoDB) GetAll(table string, items, filter interface{}, skip, limit i
 	if err != nil {
 		return err
 	}
-	return cursor.Decode(items)
+	return cursor.All(context.Background(), items)
 }
 
 //InsertOne inserts one item to the database

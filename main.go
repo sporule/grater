@@ -36,8 +36,11 @@ func main() {
 		log.Fatal("Failed to obtain database connection information from environment variables")
 	}
 
-	if err := queue.InsertQueue(); err != nil {
+	//queue.InsertQueue()
+	if queues, err := queue.GetQueues(); err != nil {
 		log.Fatal(err)
+	} else {
+		log.Print(queues)
 	}
 
 	if !utility.IsNil(os.Getenv("SCRAPER")) {
