@@ -12,7 +12,7 @@ import (
 //prepareQueue inject some messages to the queue
 func prepareQueue() *queue {
 	id, _ := uuid.NewRandom()
-	q := &queue{Name: "test", ID: id.String(), Status: utility.Enums().Status.Active}
+	q := &queue{Name: "test", ID: id.String(), Pattern: "{\"pattern\":\"h2.entry-title\",\"children\":{\"title\":{\"pattern\":\"a[rel=bookmark]\",\"value\":\"text\"}}}", Status: utility.Enums().Status.Active}
 	link := "https://www.sproule.com"
 	q.addMessage(link)
 	q.addMessage(link)

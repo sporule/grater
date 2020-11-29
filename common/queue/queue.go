@@ -11,14 +11,14 @@ import (
 
 //Queue is the struct for queues
 type queue struct {
-	ID             string `json:"id,omitempty"`
-	Name           string `json:"name,omitempty"`
-	Status         string `json:"status,omitempty"`
-	Pattern        string `json:"pattern,omitempty"`
-	Priority       int    `json:"priorty,omitempty"`
-	TargetLocation string `json:"targetLocation,omitempty"`
-	Messages       []Message
-	mux            sync.Mutex
+	ID             string     `json:"id,omitempty"`
+	Name           string     `json:"name,omitempty"`
+	Status         string     `json:"status,omitempty"`
+	Pattern        string     `json:"pattern,omitempty"`
+	Priority       int        `json:"priorty,omitempty"`
+	TargetLocation string     `json:"targetLocation,omitempty"`
+	Messages       []Message  `json:"-"`
+	mux            sync.Mutex `json:"-"`
 }
 
 //queues returns the global queues
