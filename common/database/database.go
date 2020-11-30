@@ -3,8 +3,8 @@ package database
 //Database is the interface for storage layer
 type Database interface {
 	Connect(uri, databaseName string) error
-	GetOne(table string, item, filter interface{}) error
-	GetAll(table string, items interface{}, filter interface{}, skip, limit int64) error
+	GetOne(table string, item interface{}, filtersMap map[string]interface{}) error
+	GetAll(table string, items interface{}, filter map[string]interface{}, page int) error
 	InsertOne(table string, item interface{}) error
 	InsertMany(table string, items []interface{}) error
 	UpdateOne(table string, updateQuery, filter interface{}) error

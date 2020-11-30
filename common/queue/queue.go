@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"go.mongodb.org/mongo-driver/bson"
 
 	"github.com/sporule/grater/common/database"
 	"github.com/sporule/grater/common/utility"
@@ -57,11 +56,10 @@ func new(name, targetLocation string, pattern string) (*queue, error) {
 	}, nil
 }
 
-//GetQueues returns all queues
-//TODO: Finish GetQueues
-func GetQueues() ([]queue, error) {
+//getQueues returns all queues with page parameter
+func getQueues(filtersMap map[string]interface{}, page int) ([]queue, error) {
 	var queues []queue
-	err := database.Client.GetAll(TableName, &queues, bson.M{}, 0, 30)
+	err := database.Client.GetAll(TableName, &queues, filtersMap, page)
 	return queues, err
 }
 

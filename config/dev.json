@@ -1,3 +1,4 @@
 {
-    "ENV":"dev"
+    "ENV":"dev",
+    "ITEM_PER_AGE":30
 }

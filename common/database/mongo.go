@@ -3,8 +3,11 @@ package database
 import (
 	"context"
 	"log"
+	"strconv"
 	"time"
 
+	"github.com/sporule/grater/common/database/mgoqry"
+	"github.com/sporule/grater/common/utility"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/mongo/readpref"
@@ -32,16 +35,27 @@ func (db *MongoDB) Connect(uri, databaseName string) error {
 }
 
 //GetOne returns one result
-func (db *MongoDB) GetOne(table string, item, filter interface{}) error {
-	return db.client.Collection(table).FindOne(context.TODO(), filter).Decode(item)
+func (db *MongoDB) GetOne(table string, item interface{}, filtersMap map[string]interface{}) error {
+	//convert filters map to filter bson.M
+	filters := mgoqry.Bsons(filtersMap)
+	return db.client.Collection(table).FindOne(context.TODO(), filters).Decode(item)
 }
 
 //GetAll returns all result
-func (db *MongoDB) GetAll(table string, items interface{}, filter interface{}, skip, limit int64) error {
+func (db *MongoDB) GetAll(table string, items interface{}, filtersMap map[string]interface{}, page int) error {
+	//set pagination
+	itemPerPageStr := utility.Config["ITEM_PER_AGE"]
+	itemPerPage, _ := strconv.Atoi(itemPerPageStr)
+	skipSize := page * itemPerPage
 	options := &options.FindOptions{}
-	options.SetSkip(skip)
-	options.SetLimit(limit)
-	cursor, err := db.client.Collection(table).Find(context.TODO(), filter, options)
+	options.SetSkip(int64(skipSize))
+	options.SetLimit(int64(itemPerPage))
+
+	//convert filters map to filter bson.M
+	filters := mgoqry.Bsons(filtersMap)
+
+	//get from the db
+	cursor, err := db.client.Collection(table).Find(context.TODO(), filters, options)
 	if err != nil {
 		return err
 	}
