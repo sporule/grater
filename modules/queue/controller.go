@@ -54,40 +54,6 @@
 // 	c.JSON(result.Expand())
 // }
 
-// //requestMessagesController returns a message to client
-// func requestMessagesController(c *gin.Context) {
-// 	cCp := c.Copy()
-// 	res := make(chan utility.Result)
-// 	go func() {
-// 		qID := cCp.Param("qid")
-// 		worker := cCp.DefaultQuery("worker", "")
-// 		sizeStr := cCp.DefaultQuery("size", "30")
-// 		size, err := strconv.Atoi(sizeStr)
-// 		if err != nil {
-// 			res <- utility.Result{Code: http.StatusOK, Obj: &utility.Error{Error: utility.Enums().ErrorMessages.SystemError}}
-// 			return
-// 		}
-// 		if worker == "" {
-// 			res <- utility.Result{Code: http.StatusOK, Obj: &utility.Error{Error: "Could not identify the worker"}}
-// 			return
-// 		}
-// 		q, qErr := getQueue(qID)
-// 		if qErr != nil {
-// 			res <- utility.Result{Code: http.StatusOK, Obj: &utility.Error{Error: utility.Enums().ErrorMessages.RecordNotFound}}
-// 			return
-// 		}
-// 		msgs, msgErr := q.allocateMessages(worker, size)
-// 		if msgErr != nil {
-// 			res <- utility.Result{Code: http.StatusOK, Obj: &utility.Error{Error: utility.Enums().ErrorMessages.RecordNotFound}}
-// 			return
-// 		}
-// 		res <- utility.Result{Code: http.StatusOK, Obj: msgs}
-// 		return
-// 	}()
-// 	result := <-res
-// 	c.JSON(result.Expand())
-// }
-
 // //updateMessageController updates the status of the message
 // func updateMessageController(c *gin.Context) {
 // 	cCp := c.Copy()

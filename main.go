@@ -1,16 +1,13 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"os"
-	"time"
 
-	"github.com/gin-gonic/gin"
-	"github.com/sporule/grater/common/database"
-	"github.com/sporule/grater/common/queue"
-	"github.com/sporule/grater/common/utility"
-	"github.com/sporule/grater/distributor/apiv1"
-	"github.com/sporule/grater/scraper"
+	"github.com/sporule/grater/models"
+	"github.com/sporule/grater/modules/database"
+	"github.com/sporule/grater/modules/utility"
 )
 
 func main() {
@@ -36,42 +33,66 @@ func main() {
 		log.Fatal("Failed to obtain database connection information from environment variables")
 	}
 
-	//queue.InsertQueue()
-	if queues, err := queue.GetQueues(); err != nil {
-		log.Fatal(err)
-	} else {
-		log.Print(queues)
-	}
+	// rule, _ := models.NewRule("testRule", "testStorage", "a.text", "https://blog.golang.org", 5)
+	// err := rule.Upsert()
+	// if err != nil {
+	// 	fmt.Printf("%+v\n", err)
+	// }
 
-	if !utility.IsNil(os.Getenv("SCRAPER")) {
-		if !utility.IsNil(os.Getenv("DISTRIBUTOR")) {
-			go func() {
-				for {
-					//turn on scraper mode
-					err := scraper.StartScraping(2)
-					if !utility.IsNil(err) {
-						log.Println("error occured, wait for 10 seconds before restart")
-						time.Sleep(10 * time.Second)
-					}
-				}
-			}()
+	// rules, err := models.GetRules(nil, 1)
+	// if err != nil {
+	// 	fmt.Printf("%+v\n", err)
+	// }
+	// links, err := rules[0].GenerateLinks()
+	// err = models.AddLinksRaw(links, rules[0].ID)
+	// fmt.Printf("%+v\n", err)
 
-		} else {
-			for {
-				//turn on scraper mode
-				err := scraper.StartScraping(2)
-				if !utility.IsNil(err) {
-					log.Println("error occured, wait for 10 seconds before restart")
-					time.Sleep(10 * time.Second)
-				}
-			}
-		}
+	// links, err := models.AllocateLinks("535b5e1f-6447-4408-bedd-62d3992f3c3e", "worker1")
+	links, err := models.GetLinks("535b5e1f-6447-4408-bedd-62d3992f3c3e", "Running", 1)
+	var linkIDs []string
+	for _, link := range links {
+		linkIDs = append(linkIDs, link.ID)
 	}
+	models.UpdateLinksStatusToComplete(linkIDs)
+	fmt.Printf("%+v\n", err)
+	fmt.Printf("%+v\n", links)
 
-	if !utility.IsNil(os.Getenv("DISTRIBUTOR")) {
-		//turn on distributor mode
-		router := gin.Default()
-		apiv1.RegisterAPIRoutes(router)
-		router.Run()
-	}
+	// //queue.InsertQueue()
+	// if queues, err := queue.GetQueues(); err != nil {
+	// 	log.Fatal(err)
+	// } else {
+	// 	log.Print(queues)
+	// }
+
+	// if !utility.IsNil(os.Getenv("SCRAPER")) {
+	// 	if !utility.IsNil(os.Getenv("DISTRIBUTOR")) {
+	// 		go func() {
+	// 			for {
+	// 				//turn on scraper mode
+	// 				err := scraper.StartScraping(2)
+	// 				if !utility.IsNil(err) {
+	// 					log.Println("error occured, wait for 10 seconds before restart")
+	// 					time.Sleep(10 * time.Second)
+	// 				}
+	// 			}
+	// 		}()
+
+	// 	} else {
+	// 		for {
+	// 			//turn on scraper mode
+	// 			err := scraper.StartScraping(2)
+	// 			if !utility.IsNil(err) {
+	// 				log.Println("error occured, wait for 10 seconds before restart")
+	// 				time.Sleep(10 * time.Second)
+	// 			}
+	// 		}
+	// 	}
+	// }
+
+	// if !utility.IsNil(os.Getenv("DISTRIBUTOR")) {
+	// 	//turn on distributor mode
+	// 	router := gin.Default()
+	// 	apiv1.RegisterAPIRoutes(router)
+	// 	router.Run()
+	// }
 }

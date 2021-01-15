@@ -77,14 +77,14 @@ func (db *MongoDB) InsertMany(table string, items []interface{}) error {
 //UpdateOne updates one item
 func (db *MongoDB) UpdateOne(table string, filtersMap map[string]interface{}, updatedItem interface{}) error {
 	filters := mgoqry.Bsons(filtersMap)
-	_, err := db.client.Collection(table).UpdateOne(context.TODO(), filters, updatedItem)
+	_, err := db.client.Collection(table).UpdateOne(context.TODO(), filters, mgoqry.Bson("$set", updatedItem))
 	return err
 }
 
-//Upsert updates or inserts one item
+//UpsertOne updates or inserts one item
 func (db *MongoDB) UpsertOne(table string, filtersMap map[string]interface{}, updatedItem interface{}) error {
 	filters := mgoqry.Bsons(filtersMap)
-	_, err := db.client.Collection(table).UpdateOne(context.TODO(), filters, updatedItem, options.Update().SetUpsert(true))
+	_, err := db.client.Collection(table).UpdateOne(context.TODO(), filters, mgoqry.Bson("$set", updatedItem), options.Update().SetUpsert(true))
 	return err
 }
 
@@ -92,7 +92,7 @@ func (db *MongoDB) UpsertOne(table string, filtersMap map[string]interface{}, up
 func (db *MongoDB) UpdateMany(table string, filtersMap map[string]interface{}, updatesFieldsMap map[string]interface{}) error {
 	filters := mgoqry.Bsons(filtersMap)
 	updatesFields := mgoqry.Bsons(updatesFieldsMap)
-	_, err := db.client.Collection(table).UpdateMany(context.TODO(), filters, updatesFields)
+	_, err := db.client.Collection(table).UpdateMany(context.TODO(), filters, mgoqry.Bson("$set", updatesFields))
 	return err
 }
 
@@ -100,7 +100,7 @@ func (db *MongoDB) UpdateMany(table string, filtersMap map[string]interface{}, u
 func (db *MongoDB) UpsertMany(table string, filtersMap map[string]interface{}, updatesFieldsMap map[string]interface{}) error {
 	filters := mgoqry.Bsons(filtersMap)
 	updatesFields := mgoqry.Bsons(updatesFieldsMap)
-	_, err := db.client.Collection(table).UpdateMany(context.TODO(), filters, updatesFields, options.Update().SetUpsert(true))
+	_, err := db.client.Collection(table).UpdateMany(context.TODO(), filters, mgoqry.Bson("$set", updatesFields), options.Update().SetUpsert(true))
 	return err
 }
 

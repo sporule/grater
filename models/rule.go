@@ -2,6 +2,8 @@ package models
 
 import (
 	"errors"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -19,14 +21,14 @@ type Rule struct {
 	Priority       int       `json:"priorty,omitempty"`
 	TargetLocation string    `json:"targetLocation,omitempty"`
 	LinkPattern    string    `json:"linkPattern,omitempty"`
-	Pages          int       `json:"pages,omitempty"`
+	TotalPages     int       `json:"pages,omitempty"`
 	LastUpdate     time.Time `json:"lastUpdate,omitempty"`
 }
 
 const ruleTable = "rule"
 
 //NewRule is the constructor of Rule
-func NewRule(name, targetLocation, pattern, linkPattern string, pages int) (*Rule, error) {
+func NewRule(name, targetLocation, pattern, linkPattern string, totalPages int) (*Rule, error) {
 	if utility.IsNil(name, pattern, targetLocation) {
 		return nil, errors.New(utility.Enums().ErrorMessages.LackOfInfo)
 	}
@@ -36,8 +38,9 @@ func NewRule(name, targetLocation, pattern, linkPattern string, pages int) (*Rul
 		Name:           name,
 		Status:         utility.Enums().Status.Active,
 		Pattern:        pattern,
+		Priority:       0,
 		LinkPattern:    linkPattern,
-		Pages:          pages,
+		TotalPages:     totalPages,
 		TargetLocation: targetLocation,
 	}, nil
 }
@@ -47,6 +50,22 @@ func (rule *Rule) Upsert() error {
 	filters := map[string]interface{}{"_id": rule.ID}
 	rule.LastUpdate = time.Now()
 	return database.Client.UpsertOne(ruleTable, filters, rule)
+}
+
+//GenerateLinks generates links based on Link Pattern and Page
+func (rule *Rule) GenerateLinks() ([]string, error) {
+	//page pattern is {page}
+	var links []string
+	pagePattern := "{page}"
+	if !strings.Contains(rule.LinkPattern, pagePattern) {
+		return nil, errors.New(utility.Enums().ErrorMessages.LackOfInfo)
+	}
+	page := 1
+	for page <= rule.TotalPages {
+		links = append(links, strings.ReplaceAll(rule.LinkPattern, pagePattern, strconv.Itoa(page)))
+		page++
+	}
+	return links, nil
 }
 
 //GetRule returns rule by ID

@@ -33,7 +33,7 @@ func (enums *enum) LoadEnums() {
 
 func (enums *enum) loadStatus() {
 	enums.Status.Active = "Active"
-	enums.Status.Finished = "Finished"
+	enums.Status.Completed = "Completed"
 	enums.Status.Running = "Running"
 	enums.Status.Cancelled = "Cancelled"
 }
@@ -80,7 +80,7 @@ type role struct {
 
 //status is the collection of roles
 type status struct {
-	Active, Running, Finished, Cancelled string
+	Active, Running, Completed, Cancelled string
 }
 
 //Other is the struct of uncategorise enums
