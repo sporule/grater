@@ -7,8 +7,15 @@ type Database interface {
 	GetAll(table string, items interface{}, filter map[string]interface{}, page int) error
 	InsertOne(table string, item interface{}) error
 	InsertMany(table string, items []interface{}) error
-	UpdateOne(table string, updateQuery, filter interface{}) error
-	UpdateMany(table string, updateQuery, filter interface{}) error
+	UpdateOne(table string, filtersMap map[string]interface{}, updatedItem interface{}) error
+	UpsertOne(table string, filtersMap map[string]interface{}, updatedItem interface{}) error
+	UpdateMany(table string, filtersMap map[string]interface{}, updatesFieldsMap map[string]interface{}) error
+	UpsertMany(table string, filtersMap map[string]interface{}, updatesFieldsMap map[string]interface{}) error
+	InQry(values interface{}) interface{}
+	NotInQry(values interface{}) interface{}
+	GreaterThanQry(value interface{}) interface{}
+	LessThanQry(value interface{}) interface{}
+	NotEqualQry(value interface{}) interface{}
 }
 
 //Client is the global database instance

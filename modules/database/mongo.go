@@ -6,8 +6,8 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/sporule/grater/common/database/mgoqry"
-	"github.com/sporule/grater/common/utility"
+	"github.com/sporule/grater/modules/database/mgoqry"
+	"github.com/sporule/grater/modules/utility"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/mongo/readpref"
@@ -75,13 +75,56 @@ func (db *MongoDB) InsertMany(table string, items []interface{}) error {
 }
 
 //UpdateOne updates one item
-func (db *MongoDB) UpdateOne(table string, updateQuery, filter interface{}) error {
-	_, err := db.client.Collection(table).UpdateOne(context.TODO(), filter, updateQuery)
+func (db *MongoDB) UpdateOne(table string, filtersMap map[string]interface{}, updatedItem interface{}) error {
+	filters := mgoqry.Bsons(filtersMap)
+	_, err := db.client.Collection(table).UpdateOne(context.TODO(), filters, updatedItem)
 	return err
 }
 
-//UpdateMany updates many item
-func (db *MongoDB) UpdateMany(table string, updateQuery, filter interface{}) error {
-	_, err := db.client.Collection(table).UpdateMany(context.TODO(), filter, updateQuery)
+//Upsert updates or inserts one item
+func (db *MongoDB) UpsertOne(table string, filtersMap map[string]interface{}, updatedItem interface{}) error {
+	filters := mgoqry.Bsons(filtersMap)
+	_, err := db.client.Collection(table).UpdateOne(context.TODO(), filters, updatedItem, options.Update().SetUpsert(true))
 	return err
+}
+
+//UpdateMany updates many items
+func (db *MongoDB) UpdateMany(table string, filtersMap map[string]interface{}, updatesFieldsMap map[string]interface{}) error {
+	filters := mgoqry.Bsons(filtersMap)
+	updatesFields := mgoqry.Bsons(updatesFieldsMap)
+	_, err := db.client.Collection(table).UpdateMany(context.TODO(), filters, updatesFields)
+	return err
+}
+
+//UpsertMany updates or inserts many items
+func (db *MongoDB) UpsertMany(table string, filtersMap map[string]interface{}, updatesFieldsMap map[string]interface{}) error {
+	filters := mgoqry.Bsons(filtersMap)
+	updatesFields := mgoqry.Bsons(updatesFieldsMap)
+	_, err := db.client.Collection(table).UpdateMany(context.TODO(), filters, updatesFields, options.Update().SetUpsert(true))
+	return err
+}
+
+//InQry takes list of values and returns "In" query
+func (db *MongoDB) InQry(values interface{}) interface{} {
+	return mgoqry.Bson("$in", values)
+}
+
+//NotInQry takes list of values and returns "NotIn" query
+func (db *MongoDB) NotInQry(values interface{}) interface{} {
+	return mgoqry.Bson("$nin", values)
+}
+
+//GreaterThanQry take a value and returns "gt" query
+func (db *MongoDB) GreaterThanQry(value interface{}) interface{} {
+	return mgoqry.Bson("$gt", value)
+}
+
+//LessThanQry take a value and returns "lt" query
+func (db *MongoDB) LessThanQry(value interface{}) interface{} {
+	return mgoqry.Bson("$lt", value)
+}
+
+//NotEqualQry take a value and returns "not" query
+func (db *MongoDB) NotEqualQry(value interface{}) interface{} {
+	return mgoqry.Bson("$not", value)
 }
