@@ -46,6 +46,10 @@ func (db *MongoDB) GetAll(table string, items interface{}, filtersMap map[string
 	//set pagination
 	itemPerPageStr := utility.Config["ITEM_PER_AGE"]
 	itemPerPage, _ := strconv.Atoi(itemPerPageStr)
+	if page == 0 {
+		//set unlimited item per page
+		itemPerPage = 99999999
+	}
 	skipSize := page * itemPerPage
 	options := &options.FindOptions{}
 	options.SetSkip(int64(skipSize))

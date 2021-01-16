@@ -1,11 +1,11 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"os"
 
-	"github.com/sporule/grater/models"
+	"github.com/gin-gonic/gin"
+	"github.com/sporule/grater/modules/apis/apiv1"
 	"github.com/sporule/grater/modules/database"
 	"github.com/sporule/grater/modules/utility"
 )
@@ -48,14 +48,14 @@ func main() {
 	// fmt.Printf("%+v\n", err)
 
 	// links, err := models.AllocateLinks("535b5e1f-6447-4408-bedd-62d3992f3c3e", "worker1")
-	links, err := models.GetLinks("535b5e1f-6447-4408-bedd-62d3992f3c3e", "Running", 1)
-	var linkIDs []string
-	for _, link := range links {
-		linkIDs = append(linkIDs, link.ID)
-	}
-	models.UpdateLinksStatusToComplete(linkIDs)
-	fmt.Printf("%+v\n", err)
-	fmt.Printf("%+v\n", links)
+	// links, err := models.GetLinks("535b5e1f-6447-4408-bedd-62d3992f3c3e", "Running", 1)
+	// var linkIDs []string
+	// for _, link := range links {
+	// 	linkIDs = append(linkIDs, link.ID)
+	// }
+	// models.UpdateLinksStatusToComplete(linkIDs)
+	// fmt.Printf("%+v\n", err)
+	// fmt.Printf("%+v\n", links)
 
 	// //queue.InsertQueue()
 	// if queues, err := queue.GetQueues(); err != nil {
@@ -91,8 +91,11 @@ func main() {
 
 	// if !utility.IsNil(os.Getenv("DISTRIBUTOR")) {
 	// 	//turn on distributor mode
-	// 	router := gin.Default()
-	// 	apiv1.RegisterAPIRoutes(router)
-	// 	router.Run()
+	// router := gin.Default()
+	// apiv1.RegisterAPIRoutes(router)
+	// router.Run()
 	// }
+	router := gin.Default()
+	apiv1.RegisterAPIRoutes(router)
+	router.Run()
 }

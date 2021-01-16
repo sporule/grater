@@ -3,7 +3,8 @@
 
 ## Get
 
-GET http://localhost:8080/api/v1/queues/ HTTP/1.1
+
+GET http://localhost:8080/api/v1/dist/rules HTTP/1.1
 
 ## Add Queue
 
