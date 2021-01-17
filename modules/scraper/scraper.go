@@ -33,6 +33,8 @@ type scraper struct {
 	Rule            models.Rule
 	Queue           *queue.Queue
 	ReceviedLinkIDs []string
+	ScrapedRecords  []string
+	TableName       string
 }
 
 //new creates new scraper
@@ -41,6 +43,15 @@ func new() (*scraper, error) {
 	return &scraper{
 		ID: id.String(),
 	}, nil
+}
+
+func (scraper *scraper) SaveScrapedRecords() error {
+	err := models.InsertManyResults(scraper.TableName, scraper.ScrapedRecords)
+	if err != nil {
+		return err
+	}
+	scraper.ScrapedRecords = make([]string, 0)
+	return nil
 }
 
 func (scraper *scraper) setProxies() error {
@@ -115,6 +126,7 @@ func (scraper *scraper) setRule() error {
 			return errors.New("Unable to read rule information")
 		}
 		scraper.Rule = rule
+		scraper.TableName = rule.TargetLocation
 	} else {
 		return errors.New("API Not found")
 	}
@@ -173,8 +185,10 @@ func (scraper *scraper) setCollector() error {
 			log.Println("Cannot read the rule pattern", err)
 			return
 		}
-		parsePattern(e.DOM, pattern)
-		// value := parsePattern(e.DOM, pattern)
+		// parsePattern(e.DOM, pattern)
+		value := parsePattern(e.DOM, pattern)
+		jsonString, err := json.Marshal(value)
+		scraper.ScrapedRecords = append(scraper.ScrapedRecords, string(jsonString))
 		//TODO: Save in the database
 		//log.Println(value)
 		log.Print("Completed")
@@ -242,12 +256,19 @@ func StartScraping() error {
 	if !utility.IsNil(err) {
 		return err
 	}
-	//get new proxies every 5 minutes
+	//get new proxies every 6 minutes
 	go func() {
 		for {
 			scraper.setProxies()
 			scraper.setCollector()
-			time.Sleep(5 * time.Minute)
+			time.Sleep(6 * time.Minute)
+		}
+	}()
+	//save data to database very minute
+	go func() {
+		for {
+			scraper.SaveScrapedRecords()
+			time.Sleep(time.Minute)
 		}
 	}()
 	if err != nil {
@@ -264,6 +285,7 @@ func StartScraping() error {
 	}
 	scraper.Queue.Run(scraper.Collector)
 	scraper.setLinksToComplete()
+	scraper.SaveScrapedRecords()
 	log.Println("Scraper Completed")
 	return nil
 }
