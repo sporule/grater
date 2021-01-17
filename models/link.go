@@ -85,6 +85,9 @@ func AllocateLinks(ruleID, worker string) ([]Link, error) {
 	if err != nil {
 		return nil, err
 	}
+	if links == nil {
+		return nil, errors.New(utility.Enums().ErrorMessages.RecordNotFound)
+	}
 	//update links status to running
 	var ids []string
 	for _, link := range links {

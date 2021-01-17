@@ -17,10 +17,6 @@
 			}
 		}
 	},
-	"page":{
-		pattern:"ul.a-pagination>li.a-selected>a",
-		value:"text"
-	}
 }
 
 

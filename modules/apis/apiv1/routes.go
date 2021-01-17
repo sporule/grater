@@ -9,10 +9,10 @@ import (
 //RegisterAPIRoutes registers all api routers
 func RegisterAPIRoutes(router *gin.Engine) {
 	r := router.Group("/api/v1")
-	r.Use(gzip.Gzip(gzip.DefaultCompression))
 	router.NoRoute(func(c *gin.Context) {
-		c.JSON(404, gin.H{"code": "PAGE_NOT_FOUND", "message": "Page not found"})
+		c.HTML(404, "404.html", gin.H{})
 	})
+	r.Use(gzip.Gzip(gzip.DefaultCompression))
 	registerEndpoints(r)
 }
 

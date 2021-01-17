@@ -6,7 +6,7 @@ import (
 	"reflect"
 )
 
-//IsNil checks if all items are empty, it will return true if it is not nil
+//IsNil checks if all items are empty, it will return true if it is nil
 func IsNil(items ...interface{}) (result bool) {
 	result = false
 	for _, item := range items {

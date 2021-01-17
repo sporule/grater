@@ -12,8 +12,8 @@ import (
 func InitiateDistRouters(router *gin.RouterGroup) {
 
 	r := router.Group("/dist")
-	r.GET("/rules ", getRulesController)
-	r.GET("/links ", allocateLinksController)
+	r.GET("/rules", getRulesController)
+	r.GET("/links", allocateLinksController)
 	r.POST("/links", completeLinksController)
 }
 
@@ -37,15 +37,15 @@ func allocateLinksController(c *gin.Context) {
 	cCp := c.Copy()
 	res := make(chan utility.Result)
 	go func() {
-		ruleID := cCp.Param("ruleid")
+		ruleID := cCp.DefaultQuery("ruleid", "")
 		worker := cCp.DefaultQuery("worker", "")
-		if worker == "" {
-			res <- utility.Result{Code: http.StatusOK, Obj: &utility.Error{Error: "Could not identify the worker"}}
+		if utility.IsNil(worker, ruleID) {
+			res <- utility.Result{Code: http.StatusOK, Obj: &utility.Error{Error: utility.Enums().ErrorMessages.LackOfInfo}}
 			return
 		}
 		links, err := models.AllocateLinks(ruleID, worker)
 		if err != nil {
-			res <- utility.Result{Code: http.StatusOK, Obj: &utility.Error{Error: utility.Enums().ErrorMessages.SystemError}}
+			res <- utility.Result{Code: http.StatusOK, Obj: &utility.Error{Error: err.Error()}}
 			return
 		}
 		res <- utility.Result{Code: http.StatusOK, Obj: links}
