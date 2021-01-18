@@ -1,4 +1,4 @@
 {
     "ENV":"dev",
-    "ITEM_PER_AGE":30
+    "ITEM_PER_PAGE":"30"
 }

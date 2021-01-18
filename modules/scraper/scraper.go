@@ -157,7 +157,7 @@ func (scraper *scraper) setLinksQueue() error {
 		}
 		log.Println("CPUs: ", runtime.NumCPU())
 		scraper.Queue, _ = queue.New(
-			runtime.NumCPU(), // Number of consumer threads
+			runtime.NumCPU()*4,                          // Number of consumer threads
 			&queue.InMemoryQueueStorage{MaxSize: 10000}, // Use default queue storage
 		)
 		for _, link := range links {
@@ -187,6 +187,27 @@ func (scraper *scraper) setCollector() error {
 		}
 		// parsePattern(e.DOM, pattern)
 		value := parsePattern(e.DOM, pattern)
+		for _, v := range value {
+			//check if the first level map contains required data
+			invalid := false
+			switch v.(type) {
+			case string:
+				if len(v.(string)) <= 0 {
+					invalid = true
+				}
+			case map[string]interface{}:
+				if len(v.(map[string]interface{})) <= 0 {
+					invalid = true
+				}
+			default:
+				invalid = true
+			}
+			if invalid {
+				log.Println("Failed Invalid")
+				e.Request.Retry()
+				return
+			}
+		}
 		jsonString, err := json.Marshal(value)
 		scraper.ScrapedRecords = append(scraper.ScrapedRecords, string(jsonString))
 		//TODO: Save in the database
@@ -196,7 +217,7 @@ func (scraper *scraper) setCollector() error {
 
 	c.OnError(func(r *colly.Response, err error) {
 		// log.Println("Request URL:", r.Request.URL, "failed with response:", string(r.Body), "\nError:", err)
-		log.Println("Failed")
+		log.Println("Failed HTTP")
 		r.Request.Retry()
 	})
 

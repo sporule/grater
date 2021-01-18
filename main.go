@@ -82,7 +82,6 @@ func main() {
 					}
 				}
 			}()
-
 		} else {
 			for {
 				//turn on scraper mode

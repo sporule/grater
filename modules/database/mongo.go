@@ -44,13 +44,14 @@ func (db *MongoDB) GetOne(table string, item interface{}, filtersMap map[string]
 //GetAll returns all result
 func (db *MongoDB) GetAll(table string, items interface{}, filtersMap map[string]interface{}, page int) error {
 	//set pagination
-	itemPerPageStr := utility.Config["ITEM_PER_AGE"]
+	itemPerPageStr := utility.Config["ITEM_PER_PAGE"]
 	itemPerPage, _ := strconv.Atoi(itemPerPageStr)
+	skipSize := (page - 1) * itemPerPage
 	if page == 0 {
 		//set unlimited item per page
 		itemPerPage = 99999999
+		skipSize = 0
 	}
-	skipSize := page * itemPerPage
 	options := &options.FindOptions{}
 	options.SetSkip(int64(skipSize))
 	options.SetLimit(int64(itemPerPage))
