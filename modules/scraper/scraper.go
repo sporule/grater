@@ -4,8 +4,11 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"go/token"
+	"go/types"
 	"io/ioutil"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"runtime"
@@ -35,7 +38,7 @@ type scraper struct {
 	ReceviedLinkIDs []string
 	ScrapedRecords  []string
 	TableName       string
-	AllowedLinks    []string
+	ParentLinks     map[string]string
 	Headers         map[string]string
 }
 
@@ -43,7 +46,8 @@ type scraper struct {
 func new() (*scraper, error) {
 	id, _ := uuid.NewRandom()
 	return &scraper{
-		ID: id.String(),
+		ID:          id.String(),
+		ParentLinks: make(map[string]string),
 	}, nil
 }
 
@@ -57,8 +61,8 @@ func (scraper *scraper) SaveScrapedRecords() error {
 }
 
 func (scraper *scraper) setProxies() error {
-	//hard coded to obtain sock5 proxy
-	proxyLink := "https://api.proxyscrape.com/v2/?request=getproxies&protocol=socks5&timeout=10000&country=all"
+	//hard coded to obtain http proxy
+	proxyLink := "https://api.proxyscrape.com/v2/?request=getproxies&protocol=http&timeout=10000&country=all&ssl=all&anonymity=all"
 	res, err := http.Get(proxyLink)
 	if res.Body != nil {
 		defer res.Body.Close()
@@ -69,9 +73,12 @@ func (scraper *scraper) setProxies() error {
 		return err
 	}
 	proxies := strings.Split(string(body), "\r\n")
+	validatedProxies := proxyCheck(proxies)
+	//TODO, Proxy is not working
+	log.Println("Proxies:", len(proxies), "Validated:", len(validatedProxies))
 	scraper.Proxies = make([]string, 0)
-	for _, proxy := range proxies {
-		scraper.Proxies = append(scraper.Proxies, "socks5://"+proxy)
+	for _, proxy := range validatedProxies {
+		scraper.Proxies = append(scraper.Proxies, "https://"+proxy)
 	}
 	return nil
 }
@@ -176,6 +183,9 @@ func (scraper *scraper) setCollector() error {
 		colly.MaxDepth(2),
 	)
 	c.DisableCookies()
+	c.Limit(&colly.LimitRule{
+		RandomDelay: 5 * time.Second,
+	})
 	extensions.RandomUserAgent(c)
 
 	//set headers
@@ -187,16 +197,20 @@ func (scraper *scraper) setCollector() error {
 		scraper.Headers = nil
 	}
 
-	//set deep link
-	linkPattern := scraper.Rule.DeepLinkPatterns
-	if !utility.IsNil(linkPattern) {
-		c.OnHTML(linkPattern, func(e *colly.HTMLElement) {
-			link := e.Attr("href")
-			log.Println(link)
-			scraper.AllowedLinks = append(scraper.AllowedLinks, link)
-			e.Request.Visit(link)
-		})
-	}
+	// //set deep link
+	// linkPatterns := strings.Split(scraper.Rule.DeepLinkPatterns, ",")
+	// if len(linkPatterns) >= 3 {
+	// 	//link pattern needs at least 3 parameters
+	// 	c.OnHTML(linkPatterns[0], func(e *colly.HTMLElement) {
+	// 		e.DOM.Each(func(index int, elem *goquery.Selection) {
+	// 			parentValue := elem.Find(linkPatterns[1]).First().Text()
+	// 			link, _ := elem.Find(linkPatterns[2]).First().Attr("href")
+	// 			log.Println(link)
+	// 			scraper.ParentLinks[link] = parentValue
+	// 			e.Request.Visit(link)
+	// 		})
+	// 	})
+	// }
 
 	c.OnRequest(func(r *colly.Request) {
 		if scraper.Headers != nil {
@@ -207,17 +221,22 @@ func (scraper *scraper) setCollector() error {
 	})
 
 	c.OnHTML("body", func(e *colly.HTMLElement) {
-		allowedLink := false
-		for _, v := range scraper.AllowedLinks {
-			requestLink := e.Request.URL.RequestURI()
-			if strings.Contains(requestLink, v) {
-				allowedLink = true
-				break
+		requestLink := e.Request.URL.RequestURI()
+		linkPatterns := strings.Split(scraper.Rule.DeepLinkPatterns, ",")
+		if len(linkPatterns) >= 3 {
+			// this is the parent page deeplink,link pattern needs at least 3 parameters
+			//TODO, parentPageDOM is empty
+			parentPageDom := e.DOM.Find(linkPatterns[0])
+			if parentPageDom.Size() > 0 {
+				parentPageDom.Each(func(index int, elem *goquery.Selection) {
+					parentValue := elem.Find(linkPatterns[1]).First().Text()
+					link, _ := elem.Find(linkPatterns[2]).First().Attr("href")
+					log.Println(link)
+					scraper.ParentLinks[link] = parentValue
+					e.Request.Visit(link)
+				})
+				return
 			}
-		}
-		if !allowedLink {
-			log.Println("Not valid link, return")
-			return
 		}
 		var pattern map[string]interface{}
 		err := json.Unmarshal([]byte(scraper.Rule.Pattern), &pattern)
@@ -225,8 +244,8 @@ func (scraper *scraper) setCollector() error {
 			log.Println("Cannot read the rule pattern", err)
 			return
 		}
-		// parsePattern(e.DOM, pattern)
-		value := parsePattern(e.DOM, pattern)
+		value := parsePattern(e.DOM, pattern, scraper.ParentLinks[requestLink])
+		value["link"] = requestLink
 		for _, v := range value {
 			//check if the first level map contains required data
 			invalid := false
@@ -243,15 +262,13 @@ func (scraper *scraper) setCollector() error {
 				invalid = true
 			}
 			if invalid {
-				log.Println("Failed Invalid")
+				log.Println("Invalid Page")
 				e.Request.Retry()
 				return
 			}
 		}
 		jsonString, err := json.Marshal(value)
 		scraper.ScrapedRecords = append(scraper.ScrapedRecords, string(jsonString))
-		//TODO: Save in the database
-		//log.Println(value)
 		log.Print("Completed")
 	})
 
@@ -267,46 +284,132 @@ func (scraper *scraper) setCollector() error {
 	}
 	c.SetProxyFunc(rp)
 
-	//create scraper
+	//create scraper collector
 	scraper.Collector = c
 	return nil
 }
 
-func parsePattern(s *goquery.Selection, item map[string]interface{}) map[string]interface{} {
+func parsePattern(s *goquery.Selection, item map[string]interface{}, parentValue string) map[string]interface{} {
 	result := make(map[string]interface{})
 	//flag to detect if it is a name or it is attribute object. If it contains pattern, value or children, then this is a attribute object rather than just a name
 	nameFlag := true
 	var dom *goquery.Selection
 
+	//set dom
 	if pattern, ok := item["pattern"]; ok {
 		dom = s.Find(pattern.(string))
 		nameFlag = false
 	}
 
+	//obtain value
 	if val, ok := item["value"]; ok && val != "" {
+		var value string
 		if val.(string) == "text" {
-			result["value"] = dom.First().Text()
+			value = strings.TrimSpace(dom.First().Text())
 		} else if attrs := strings.Split(val.(string), ":"); attrs[0] == "attr" {
-			result["value"], _ = dom.First().Attr(attrs[1])
+			value, _ = dom.First().Attr(attrs[1])
+			value = strings.TrimSpace(value)
 		}
-		nameFlag = false
+
+		//post process
+		if postProcessJSON, ok := item["postprocess"]; ok {
+			postProcess := postProcessJSON.(map[string]interface{})
+			for k, v := range postProcess {
+				switch strings.ToLower(k) {
+				case "split":
+					//it takes two parameters, first one is the char for split, the second one is the position of the split it wants to take
+					parameters := strings.Split(v.(string), ",")
+					if len(parameters) >= 2 {
+						//split needs at least two parameters
+						index, err := strconv.Atoi(parameters[1])
+						if err == nil {
+							results := strings.Split(value, parameters[0])
+							if len(results) > index {
+								value = results[index]
+							}
+						}
+					}
+				case "replace":
+					//it takes two parameters, [0] is the old string and [1] is the new string
+					parameters := strings.Split(v.(string), ",")
+					if len(parameters) >= 2 {
+						value = strings.ReplaceAll(value, parameters[0], parameters[1])
+					}
+				default:
+				}
+			}
+		}
+
+		//validation
+		if validationJSON, ok := item["validation"]; ok && value != "" {
+			validation := validationJSON.(map[string]interface{})
+			if equation, ok := validation["equation"]; ok {
+				if targetValue, ok := validation["targetValue"]; ok {
+					expression := strings.Replace(strings.Replace(equation.(string), "parentValue", parentValue, -1), "value", value, -1)
+					fs := token.NewFileSet()
+					isValid, err := types.Eval(fs, nil, token.NoPos, expression)
+					if err == nil {
+						if isValid.Value.String() == "false" {
+							//set the value to empty (means it is invalid)
+							value = ""
+						} else if isValid.Value.String() == "true" {
+							//currently only support parentvalue or this item value
+							if targetValue.(string) == "parentValue" {
+								value = parentValue
+							}
+						}
+					}
+				}
+			}
+		}
+		if !utility.IsNil(value) {
+			//only set nameFlag to False if the value is valid
+			result["value"] = value
+			nameFlag = false
+		}
 	}
 
+	//obtain children
 	if children, ok := item["children"]; ok {
 		dom.Each(func(index int, elem *goquery.Selection) {
 			key := strconv.Itoa(index)
-			result[key] = parsePattern(elem, children.(map[string]interface{}))
+			result[key] = parsePattern(elem, children.(map[string]interface{}), parentValue)
 		})
 		nameFlag = false
 	}
 
+	//iterate all keys in the same level
 	if nameFlag {
 		for key, value := range item {
-			result[key] = parsePattern(s, value.(map[string]interface{}))
+			result[key] = parsePattern(s, value.(map[string]interface{}), parentValue)
 		}
 	}
 
 	return result
+}
+
+func proxyCheck(proxies []string) (validatedProxies []string) {
+	c := make(chan string)
+	for _, prox := range proxies {
+		go func(prox string) {
+			conn, err := net.DialTimeout("tcp", prox, 10*time.Second)
+			if err == nil {
+				defer conn.Close()
+				c <- prox
+			} else {
+				log.Println(err)
+				c <- ""
+			}
+		}(prox)
+	}
+
+	for i := 0; i < len(proxies); i++ {
+		res := <-c
+		if res != "" {
+			validatedProxies = append(validatedProxies, res)
+		}
+	}
+	return validatedProxies
 }
 
 //StartScraping fires of the scraping process
