@@ -39,3 +39,47 @@
 
 
 '{"product-meta":{"pattern":"div[data-asin][data-component-type=s-search-result]","value":"","children":{"name":{"pattern":"span.a-size-base-plus.a-color-base.a-text-normal","value":"text"},"image":{"pattern":"img[data-image-latency=s-product-image]","value":"attr:src"},"url":{"pattern":"a.a-link-normal.a-text-normal","value":"attr:href"}}}}'
+
+
+{
+    _id: '535b5e1f-6447-4408-bedd-62d3992f3c3e',
+    lastupdate: ISODate('2021-01-15T19:27:51.025Z'),
+    linkpattern: 'https://www.amazon.co.uk/s?i=clothing&rh=p_76%3A419158031&dc&page={page}',
+    name: 'Amazon Shoes',
+    pattern: '{"product-meta":{"pattern":"div[data-asin][data-component-type=s-search-result]","value":"","children":{"name":{"pattern":"span.a-size-base-plus.a-color-base.a-text-normal","value":"text"},"image":{"pattern":"img[data-image-latency=s-product-image]","value":"attr:src"},"url":{"pattern":"a.a-link-normal.a-text-normal","value":"attr:href"}}}}',
+    priority: 0,
+    status: 'Active',
+    deeplinkPatterns: 'div[data-asin][data-component-type=s-search-result] a.a-link-normal.a-text-normal',
+    targetlocation: 'testStorage',
+    headers: '{"accept":"text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9","referer":"https://www.amazon.co.uk/"}',
+    totalpages: 50
+}
+
+
+{
+    _id: '535b5e1f-6447-4408-bedd-62d3992f3c3e',
+    lastupdate: ISODate('2021-01-15T19:27:51.025Z'),
+    linkpattern: 'https://www.amazon.co.uk/s?i=clothing&rh=p_76%3A419158031&dc&page={page}',
+    name: 'Amazon Shoes',
+    pattern: '{"product-meta":{"pattern":"div.a-fixed-right-grid-col.ie7-width-935.a-col-left","value":"","children":{"name":{"pattern":"span.a-size-large.product-title-word-break","value":"text"},"price":{"pattern":"span.a-size-medium.a-color-price.priceBlockBuyingPriceString","value":"text"}}}}',
+    priority: 0,
+    status: 'Active',
+    deeplinkPatterns: 'div[data-asin][data-component-type=s-search-result] a.a-link-normal.a-text-normal',
+    targetlocation: 'testStorage',
+    headers: '{"accept":"text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9","referer":"https://www.google.com/"}',
+    totalpages: 50
+}
+
+{
+    _id: '535b5e1f-6447-4408-bedd-62d3992f3c3e',
+    lastupdate: ISODate('2021-01-15T19:27:51.025Z'),
+    linkpattern: 'https://www.amazon.co.uk/s?i=clothing&rh=p_76%3A419158031&dc&page={page}',
+    name: 'Amazon Shoes',
+    pattern: '{"product-meta":{"pattern":"div.a-fixed-right-grid-col.ie7-width-935.a-col-left","value":"","children":{"name":{"pattern":"span.a-size-large.product-title-word-break","value":"text"},"price":{"pattern":"span.a-size-medium.a-color-price.priceBlockBuyingPriceString","value":"text"}}}}',
+    priority: 0,
+    status: 'Active',
+    deeplinkPatterns: 'div[data-asin][data-component-type=s-search-result] a.a-link-normal.a-text-normal',
+    targetlocation: 'testStorage',
+    headers: '{"accept":"text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9","referer":"https://www.amazon.co.uk/"}',
+    totalpages: 50
+}

@@ -14,34 +14,38 @@ import (
 
 //Rule sets the scraper pattern for all links
 type Rule struct {
-	ID             string    `bson:"_id" json:"id,omitempty"`
-	Name           string    `json:"name,omitempty"`
-	Status         string    `json:"status,omitempty"`
-	Pattern        string    `json:"pattern,omitempty"`
-	Priority       int       `json:"priorty,omitempty"`
-	TargetLocation string    `json:"targetLocation,omitempty"`
-	LinkPattern    string    `json:"linkPattern,omitempty"`
-	TotalPages     int       `json:"pages,omitempty"`
-	LastUpdate     time.Time `json:"lastUpdate,omitempty"`
+	ID               string    `bson:"_id" json:"id,omitempty"`
+	Name             string    `json:"name,omitempty"`
+	Status           string    `json:"status,omitempty"`
+	Pattern          string    `json:"pattern,omitempty"`
+	Priority         int       `json:"priorty,omitempty"`
+	TargetLocation   string    `json:"targetLocation,omitempty"`
+	LinkPattern      string    `json:"linkPattern,omitempty"`
+	DeepLinkPatterns string    `json:"deeplinkPatterns,omitempty"`
+	TotalPages       int       `json:"pages,omitempty"`
+	LastUpdate       time.Time `json:"lastUpdate,omitempty"`
+	Headers          string    `json:"headers,omitempty"`
 }
 
 const ruleTable = "rule"
 
 //NewRule is the constructor of Rule
-func NewRule(name, targetLocation, pattern, linkPattern string, totalPages int) (*Rule, error) {
+func NewRule(name, targetLocation, pattern, linkPattern, deeplinkPatterns, headers string, totalPages int) (*Rule, error) {
 	if utility.IsNil(name, pattern, targetLocation) {
 		return nil, errors.New(utility.Enums().ErrorMessages.LackOfInfo)
 	}
 	id, _ := uuid.NewRandom()
 	return &Rule{
-		ID:             id.String(),
-		Name:           name,
-		Status:         utility.Enums().Status.Active,
-		Pattern:        pattern,
-		Priority:       0,
-		LinkPattern:    linkPattern,
-		TotalPages:     totalPages,
-		TargetLocation: targetLocation,
+		ID:               id.String(),
+		Name:             name,
+		Status:           utility.Enums().Status.Active,
+		Pattern:          pattern,
+		Priority:         0,
+		LinkPattern:      linkPattern,
+		DeepLinkPatterns: deeplinkPatterns,
+		TotalPages:       totalPages,
+		Headers:          headers,
+		TargetLocation:   targetLocation,
 	}, nil
 }
 

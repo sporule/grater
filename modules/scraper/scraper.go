@@ -8,9 +8,9 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"runtime"
 	"time"
 
-	"runtime"
 	"strconv"
 	"strings"
 
@@ -35,6 +35,8 @@ type scraper struct {
 	ReceviedLinkIDs []string
 	ScrapedRecords  []string
 	TableName       string
+	AllowedLinks    []string
+	Headers         map[string]string
 }
 
 //new creates new scraper
@@ -155,9 +157,8 @@ func (scraper *scraper) setLinksQueue() error {
 			log.Print("Unable to parse the returned links result ", err)
 			return err
 		}
-		log.Println("CPUs: ", runtime.NumCPU())
 		scraper.Queue, _ = queue.New(
-			runtime.NumCPU()*4,                          // Number of consumer threads
+			runtime.NumCPU()*10,
 			&queue.InMemoryQueueStorage{MaxSize: 10000}, // Use default queue storage
 		)
 		for _, link := range links {
@@ -171,14 +172,53 @@ func (scraper *scraper) setLinksQueue() error {
 }
 
 func (scraper *scraper) setCollector() error {
-	c := colly.NewCollector()
+	c := colly.NewCollector(
+		colly.MaxDepth(2),
+	)
+	c.DisableCookies()
 	extensions.RandomUserAgent(c)
 
+	//set headers
+	var headers map[string]string
+	err := json.Unmarshal([]byte(scraper.Rule.Headers), &headers)
+	if err == nil {
+		scraper.Headers = headers
+	} else {
+		scraper.Headers = nil
+	}
+
+	//set deep link
+	linkPattern := scraper.Rule.DeepLinkPatterns
+	if !utility.IsNil(linkPattern) {
+		c.OnHTML(linkPattern, func(e *colly.HTMLElement) {
+			link := e.Attr("href")
+			log.Println(link)
+			scraper.AllowedLinks = append(scraper.AllowedLinks, link)
+			e.Request.Visit(link)
+		})
+	}
+
 	c.OnRequest(func(r *colly.Request) {
-		//TODO: Config in Queue
+		if scraper.Headers != nil {
+			for k, v := range scraper.Headers {
+				r.Headers.Set(k, v)
+			}
+		}
 	})
 
 	c.OnHTML("body", func(e *colly.HTMLElement) {
+		allowedLink := false
+		for _, v := range scraper.AllowedLinks {
+			requestLink := e.Request.URL.RequestURI()
+			if strings.Contains(requestLink, v) {
+				allowedLink = true
+				break
+			}
+		}
+		if !allowedLink {
+			log.Println("Not valid link, return")
+			return
+		}
 		var pattern map[string]interface{}
 		err := json.Unmarshal([]byte(scraper.Rule.Pattern), &pattern)
 		if !utility.IsNil(err) {
