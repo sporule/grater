@@ -13,6 +13,7 @@ func InitiateDistRouters(router *gin.RouterGroup) {
 
 	r := router.Group("/dist")
 	r.GET("/rules", getRulesController)
+	r.POST("/rules", AddRuleController)
 	r.GET("/links", allocateLinksController)
 	r.POST("/links", completeLinksController)
 }
@@ -38,12 +39,12 @@ func allocateLinksController(c *gin.Context) {
 	res := make(chan utility.Result)
 	go func() {
 		ruleID := cCp.DefaultQuery("ruleid", "")
-		worker := cCp.DefaultQuery("worker", "")
-		if utility.IsNil(worker, ruleID) {
+		scraper := cCp.DefaultQuery("scraper", "")
+		if utility.IsNil(scraper, ruleID) {
 			res <- utility.Result{Code: http.StatusOK, Obj: &utility.Error{Error: utility.Enums().ErrorMessages.LackOfInfo}}
 			return
 		}
-		links, err := models.AllocateLinks(ruleID, worker)
+		links, err := models.AllocateLinks(ruleID, scraper)
 		if err != nil {
 			res <- utility.Result{Code: http.StatusOK, Obj: &utility.Error{Error: err.Error()}}
 			return
@@ -71,6 +72,29 @@ func completeLinksController(c *gin.Context) {
 			return
 		}
 		err = models.UpdateLinksStatusToComplete(linkIDs)
+		if err != nil {
+			res <- utility.Result{Code: http.StatusOK, Obj: &utility.Error{Error: utility.Enums().ErrorMessages.SystemError}}
+			return
+		}
+		res <- utility.Result{Code: http.StatusOK, Obj: nil}
+		return
+	}()
+	result := <-res
+	c.JSON(result.Expand())
+}
+
+//AddRuleController add new rule to the database
+func AddRuleController(c *gin.Context) {
+	cCp := c.Copy()
+	res := make(chan utility.Result)
+	go func() {
+		var rule models.Rule
+		err := cCp.ShouldBindJSON(&rule)
+		if err != nil {
+			res <- utility.Result{Code: http.StatusOK, Obj: &utility.Error{Error: utility.Enums().ErrorMessages.LackOfInfo}}
+			return
+		}
+		err = rule.Upsert()
 		if err != nil {
 			res <- utility.Result{Code: http.StatusOK, Obj: &utility.Error{Error: utility.Enums().ErrorMessages.SystemError}}
 			return

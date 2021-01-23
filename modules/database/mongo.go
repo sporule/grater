@@ -44,7 +44,7 @@ func (db *MongoDB) GetOne(table string, item interface{}, filtersMap map[string]
 //GetAll returns all result
 func (db *MongoDB) GetAll(table string, items interface{}, filtersMap map[string]interface{}, page int) error {
 	//set pagination
-	itemPerPageStr := utility.Config["ITEM_PER_PAGE"]
+	itemPerPageStr := utility.GetEnv("ITEM_PER_PAGE", "10")
 	itemPerPage, _ := strconv.Atoi(itemPerPageStr)
 	skipSize := (page - 1) * itemPerPage
 	if page == 0 {

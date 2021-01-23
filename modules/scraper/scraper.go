@@ -11,8 +11,7 @@ import (
 	"math/rand"
 	"net/http"
 	"net/url"
-	"os"
-	"runtime"
+	"sync"
 	"time"
 
 	"strconv"
@@ -30,18 +29,26 @@ import (
 
 //scraper is the struct for scraper
 type scraper struct {
-	ID              string `json:"id,omitempty"`
-	Collector       *colly.Collector
-	Proxies         []string
-	Rule            models.Rule
-	Queue           *queue.Queue
-	ReceviedLinkIDs []string
-	ScrapedRecords  []string
-	TableName       string
-	ParentLinks     map[string]string
-	Headers         map[string]string
-	Cookie          string
-	CookiesJar      []string
+	ID               string `json:"id,omitempty"`
+	Collector        *colly.Collector
+	Proxies          []string
+	Rule             models.Rule
+	Queue            *queue.Queue
+	ReceviedLinkIDs  []string
+	ScrapedRecords   []string
+	TableName        string
+	ParentLinks      map[string]string
+	ParentLinksMutex sync.RWMutex
+	Headers          map[string]string
+	Cookie           string
+	CookiesJar       []string
+	UseProxy         bool
+}
+
+func (scraper *scraper) UpdateParentLinks(link, value string) {
+	scraper.ParentLinksMutex.Lock()
+	scraper.ParentLinks[link] = value
+	scraper.ParentLinksMutex.Unlock()
 }
 
 //new creates new scraper
@@ -50,6 +57,7 @@ func new() (*scraper, error) {
 	return &scraper{
 		ID:          id.String(),
 		ParentLinks: make(map[string]string),
+		UseProxy:    true,
 	}, nil
 }
 
@@ -80,17 +88,18 @@ func (scraper *scraper) getCookie() string {
 
 func (scraper *scraper) setProxies() error {
 	scraper.Proxies = make([]string, 0)
-	httpProxyLink := "https://api.proxyscrape.com/v2/?request=getproxies&protocol=http&timeout=10000&country=all&ssl=all&anonymity=all"
-	socks5ProxyLink := "https://api.proxyscrape.com/v2/?request=getproxies&protocol=socks5&timeout=10000&country=all"
+	proxyAPIStr := utility.GetEnv("PROXY_API", "socks5%https://api.proxyscrape.com/v2/?request=getproxies&protocol=socks5&timeout=10000&country=all")
+	proxyProtocol := strings.Split(proxyAPIStr, "%")[0]
+	proxyLink := strings.Split(proxyAPIStr, "%")[1]
 	testLink := strings.Join(strings.Split(scraper.Rule.LinkPattern, "/")[:3], "/")
-	proxies, err := getProxies(httpProxyLink, "http", testLink)
-	if err == nil {
-		scraper.Proxies = append(scraper.Proxies, proxies...)
+	if utility.IsNil(proxyProtocol, proxyLink, testLink) {
+		return errors.New("Can't read proxy configuration, disabling proxy")
 	}
-	proxies, err = getProxies(socks5ProxyLink, "socks5", testLink)
-	if err == nil {
-		scraper.Proxies = append(scraper.Proxies, proxies...)
+	proxies, err := getProxies(proxyLink, proxyProtocol, testLink)
+	if err != nil {
+		return err
 	}
+	scraper.Proxies = append(scraper.Proxies, proxies...)
 	return nil
 }
 
@@ -101,7 +110,7 @@ func getProxies(link, proxyType, testLink string) (fullProxies []string, err err
 	}
 	body, err := ioutil.ReadAll(res.Body)
 	if err != nil {
-		log.Print("Unable to obtain Proxy")
+		log.Println("Unable to obtain Proxy")
 		return nil, err
 	}
 	proxies := strings.Split(string(body), "\r\n")
@@ -114,7 +123,7 @@ func getProxies(link, proxyType, testLink string) (fullProxies []string, err err
 }
 
 func (scraper *scraper) setLinksToComplete() error {
-	if api := os.Getenv("DISTRIBUTOR_API"); !utility.IsNil(api) {
+	if api := utility.GetEnv("DISTRIBUTOR_API", "http://localhost:9999/api/v1/dist"); !utility.IsNil(api) {
 		body, err := json.Marshal(map[string][]string{
 			"linkids": scraper.ReceviedLinkIDs,
 		})
@@ -134,11 +143,11 @@ func (scraper *scraper) setLinksToComplete() error {
 }
 
 func (scraper *scraper) setRule() error {
-	if api := os.Getenv("DISTRIBUTOR_API"); !utility.IsNil(api) {
+	if api := utility.GetEnv("DISTRIBUTOR_API", "http://localhost:9999/api/v1/dist"); !utility.IsNil(api) {
 		//obtain the highest priority queue
 		res, err := http.Get(api + "/rules")
 		if err != nil {
-			log.Print("Unable to make request to obtain rules", err)
+			log.Println("Unable to make request to obtain rules", err)
 			return err
 		}
 		if res.Body != nil {
@@ -146,22 +155,22 @@ func (scraper *scraper) setRule() error {
 		}
 		body, err := ioutil.ReadAll(res.Body)
 		if err != nil {
-			log.Print("Unable to read rules", err)
+			log.Println("Unable to read rules", err)
 			return err
 		}
 		var rules []models.Rule
 		err = json.Unmarshal(body, &rules)
 		if err != nil {
-			log.Print("Unable to parse the returned queue result", err)
+			log.Println("Unable to parse the returned queue result", err)
 			return err
 		}
 		if len(rules) <= 0 {
-			log.Print("Unable to find any rules")
+			log.Println("Unable to find any rules")
 			return errors.New("Unable to find any rules")
 		}
 		rule := rules[0]
 		if utility.IsNil(rule.ID, rule.Pattern, rule.TargetLocation) {
-			log.Print("Unable to read rule information")
+			log.Println("Unable to read rule information")
 			return errors.New("Unable to read rule information")
 		}
 		scraper.Rule = rule
@@ -173,11 +182,11 @@ func (scraper *scraper) setRule() error {
 }
 
 func (scraper *scraper) setLinksQueue() error {
-	if api := os.Getenv("DISTRIBUTOR_API"); !utility.IsNil(api) {
+	if api := utility.GetEnv("DISTRIBUTOR_API", "http://localhost:9999/api/v1/dist"); !utility.IsNil(api) {
 		//obtain the links
-		res, err := http.Get(api + "/links?ruleid=" + scraper.Rule.ID + "&worker=" + scraper.ID)
+		res, err := http.Get(api + "/links?ruleid=" + scraper.Rule.ID + "&scraper=" + scraper.ID)
 		if err != nil {
-			log.Print("Unable to make request to obtain links ", err)
+			log.Println("Unable to make request to obtain links ", err)
 			return err
 		}
 		if res.Body != nil {
@@ -185,18 +194,23 @@ func (scraper *scraper) setLinksQueue() error {
 		}
 		body, err := ioutil.ReadAll(res.Body)
 		if err != nil {
-			log.Print("Unable to read links ", err)
+			log.Println("Unable to read links ", err)
 			return err
 		}
 		var links []models.Link
 		err = json.Unmarshal(body, &links)
 		if err != nil {
-			log.Print("Unable to parse the returned links result ", err)
+			log.Println("Could not find links")
 			return err
 		}
+		threadSizeStr := utility.GetEnv("THREADS", "20")
+		threadSize, err := strconv.Atoi(threadSizeStr)
+		if err != nil {
+			threadSize = 20
+		}
 		scraper.Queue, _ = queue.New(
-			runtime.NumCPU()*20,
-			&queue.InMemoryQueueStorage{MaxSize: 10000}, // Use default queue storage
+			threadSize,
+			&queue.InMemoryQueueStorage{MaxSize: 100000}, // Use default queue storage
 		)
 		for _, link := range links {
 			scraper.ReceviedLinkIDs = append(scraper.ReceviedLinkIDs, link.ID)
@@ -208,7 +222,7 @@ func (scraper *scraper) setLinksQueue() error {
 	return nil
 }
 
-func (scraper *scraper) AddFailedLink(url string) {
+func (scraper *scraper) AddLinkToQueue(url string) {
 	scraper.Queue.AddURL(url)
 }
 
@@ -257,6 +271,7 @@ func (scraper *scraper) setCollector() error {
 				parentPageDom.Each(func(index int, elem *goquery.Selection) {
 					parentValue := elem.Find(linkPatterns[1]).First().Text()
 					link, _ := elem.Find(linkPatterns[2]).First().Attr("href")
+					log.Println(link)
 					if len(linkPatterns) >= 4 {
 						//remove query string
 						if linkPatterns[3] == "removeQueryString" {
@@ -266,17 +281,29 @@ func (scraper *scraper) setCollector() error {
 					if len(linkPatterns) >= 5 {
 						//skip the link if it contains keyword in this list
 						if !strings.Contains(link, linkPatterns[4]) {
-							scraper.ParentLinks[link] = parentValue
-							scraper.AddFailedLink(e.Request.URL.Host + link)
-							//e.Request.Visit(link)
+							testLink := link[:4]
+							if strings.ToLower(testLink) != "http" {
+								if link[:1] == "/" {
+									link = e.Request.URL.Host + link
+								} else {
+									link = e.Request.URL.Host + "/" + link
+								}
+							}
+							scraper.UpdateParentLinks(link, parentValue)
+							scraper.AddLinkToQueue(link)
 						} else {
 							log.Println("Not visting the link:", link, "because it contains:", linkPatterns[4])
 						}
 					} else {
-						log.Println(link)
-						scraper.ParentLinks[link] = parentValue
-						scraper.AddFailedLink(e.Request.URL.Host + link)
-						//e.Request.Visit(link)
+						if strings.ToLower(link[:4]) != "http" {
+							if link[:1] == "/" {
+								link = e.Request.URL.Host + link
+							} else {
+								link = e.Request.URL.Host + "/" + link
+							}
+						}
+						scraper.UpdateParentLinks(link, parentValue)
+						scraper.AddLinkToQueue(link)
 					}
 				})
 				return
@@ -291,23 +318,19 @@ func (scraper *scraper) setCollector() error {
 		value, isWrongPage, invalidPage := parsePattern(e.DOM, pattern, scraper.ParentLinks[requestLink], true)
 		if isWrongPage {
 			//log.Println("Page layout not as expected", requestLink)
-			html, _ := e.DOM.Html()
-			if len(html) < 0 {
-				log.Println("fake")
-			}
-			scraper.AddFailedLink(e.Request.URL.String())
-			//e.Request.Retry()
+			scraper.AddLinkToQueue(e.Request.URL.String())
 			return
 		}
+		log.Println("Found result")
 		if !invalidPage {
 			value["link"] = requestLink
 			jsonString, err := json.Marshal(value)
 			if err != nil {
-				log.Println("Validated strcuture is not valid")
+				//log.Println("Data recevied is not valid")
 				return
 			}
 			scraper.ScrapedRecords = append(scraper.ScrapedRecords, string(jsonString))
-			log.Print("Completed:", requestLink, value)
+			log.Println("Scraped Success:", value)
 		}
 
 	})
@@ -322,14 +345,11 @@ func (scraper *scraper) setCollector() error {
 	})
 
 	c.OnError(func(r *colly.Response, err error) {
-		// log.Println("Request URL:", r.Request.URL, "failed with response:", string(r.Body), "\nError:", err)
-		//headers := r.Headers
 		log.Println("Failed HTTP", r.StatusCode, err, r.Request.URL)
-		scraper.AddFailedLink(r.Request.URL.String())
-		//r.Request.Retry()
+		scraper.AddLinkToQueue(r.Request.URL.String())
 	})
 
-	for len(scraper.Proxies) <= 0 {
+	for len(scraper.Proxies) <= 0 && scraper.UseProxy {
 		log.Println("Waiting for the Proxy...")
 		time.Sleep(5 * time.Second)
 	}
@@ -421,7 +441,6 @@ func parsePattern(s *goquery.Selection, item map[string]interface{}, parentValue
 								} else {
 									invalid = true
 								}
-								log.Println("Validating:", expression, isValid.Value.String())
 							} else {
 								invalid = true
 							}
@@ -488,7 +507,6 @@ func proxyCheck(proxies []string, proxyType string, testLink string) (validatedP
 	c := make(chan string)
 	for _, prox := range proxies {
 		go func(prox string) {
-			// conn, err := net.DialTimeout("tcp", prox, 5*time.Second)
 			proxyURL, err := url.Parse(proxyType + "://" + prox)
 			client := &http.Client{Transport: &http.Transport{Proxy: http.ProxyURL(proxyURL)}, Timeout: 5 * time.Second}
 			res, err := client.Get(testLink)
@@ -510,30 +528,6 @@ func proxyCheck(proxies []string, proxyType string, testLink string) (validatedP
 	return validatedProxies
 }
 
-// func proxyCheck(proxies []string) (validatedProxies []string) {
-// 	c := make(chan string)
-// 	for _, prox := range proxies {
-// 		go func(prox string) {
-// 			conn, err := net.DialTimeout("tcp", prox, 5*time.Second)
-// 			if err == nil {
-// 				defer conn.Close()
-// 				c <- prox
-// 			} else {
-// 				c <- ""
-// 			}
-// 		}(prox)
-// 	}
-
-// 	for i := 0; i < len(proxies); i++ {
-// 		res := <-c
-// 		if res != "" {
-// 			validatedProxies = append(validatedProxies, res)
-// 		}
-
-// 	}
-// 	return validatedProxies
-// }
-
 //StartScraping fires of the scraping process
 func StartScraping() error {
 	log.Println("Scraper started")
@@ -542,11 +536,12 @@ func StartScraping() error {
 	if !utility.IsNil(err) {
 		return err
 	}
-	//get new proxies every 2 minutes
+	//get new proxies every 5 minutes
 	go func() {
 		for {
 			scraper.setProxies()
-			time.Sleep(2 * time.Minute)
+			scraper.CookiesJar = make([]string, 0)
+			time.Sleep(5 * time.Minute)
 		}
 	}()
 	//save data to database very minute

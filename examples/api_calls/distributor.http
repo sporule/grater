@@ -5,7 +5,7 @@ GET http://localhost:9999/api/v1/dist/rules HTTP/1.1
 
 
 ### Allocate Links
-GET http://localhost:9999/api/v1/dist/links?ruleid=535b5e1f-6447-4408-bedd-62d3992f3c3e&worker=testWorker HTTP/1.1
+GET http://localhost:9999/api/v1/dist/links?ruleid=535b5e1f-6447-4408-bedd-62d3992f3c3e&scraper=testScraper HTTP/1.1
 
 ### Mark Links to Complete
 POST http://localhost:9999/api/v1/dist/links HTTP/1.1
@@ -13,4 +13,19 @@ content-type: application/json
 
 {
     "linkids":["c47c2415-f5a3-4599-b8c9-148bd9fc12f8","64e4bc2f-8df4-48d2-a97b-9cb3f27a9afd","d7f253ce-a67f-4917-a2c8-6b3f3b6e834d","f03d7a7f-5cf4-46ef-b96d-67ada9f9fc32","ac7f8644-23d4-4c39-8395-e348ec6d9834","ac7f8644-23d4-4c39-8395-e348ec6d9834"]
+}
+
+### Add Rules
+POST http://localhost:9999/api/v1/dist/rules HTTP/1.1
+content-type: application/json
+
+{
+    "linkPattern": "https://www.ebay.co.uk/sch/i.html?_from=R40&_nkw=ps5&_sacat=0&LH_Auction=1&_sop=1&_pgn={page}",
+    "name": "eBay PS5 Auction",
+    "pattern": "{\"name\":{\"pattern\":\"h1.it-ttl\",\"value\":\"text\"},\"price\":{\"pattern\":\"div.val.vi-price span.notranslate\",\"value\":\"text\",\"postprocess\":{\"replace\":\"£,\"},\"validation\":{\"equation\":\"300 <= value\",\"targetValue\":\"value\"}}}",
+    "deeplinkPatterns": "li.s-item.s-item--watch-at-corner,span.s-item__bids.s-item__bidCount,a.s-item__link,removeQueryString,redirect",
+    "targetLocation": "PS5",
+    "headers": "{\"accept-encoding\":\"gzip, deflate, br\",\"accept-language\":\"en-US,en;q=0.9\",\"referer\":\"https://www.ebay.co.uk/\"}",
+    "totalPages": 5,
+    "frequency": 86400
 }

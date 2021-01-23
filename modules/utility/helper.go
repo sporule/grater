@@ -3,6 +3,7 @@ package utility
 import (
 	"encoding/json"
 	"io/ioutil"
+	"os"
 	"reflect"
 )
 
@@ -74,4 +75,12 @@ func LoadConfiguration(filepath string) (err error) {
 		return err
 	}
 	return err
+}
+
+//GetEnv returns environment variable by the given key. It will return fallback value if the environment variable not exist
+func GetEnv(key, fallback string) string {
+	if value, ok := os.LookupEnv(key); ok {
+		return value
+	}
+	return fallback
 }

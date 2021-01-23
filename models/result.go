@@ -33,3 +33,10 @@ func InsertManyResults(tableName string, results []string) error {
 	}
 	return database.Client.InsertMany(tableName, resultsInterface)
 }
+
+//GetResults returns results by fitlers
+func GetResults(tableName string, filtersMap map[string]interface{}, page int) ([]Result, error) {
+	var results []Result
+	err := database.Client.GetAll(ruleTable, &results, filtersMap, page)
+	return results, err
+}

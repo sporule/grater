@@ -10,8 +10,8 @@
             "request": "launch",
             "mode": "auto",
             "program": "${workspaceRoot}/main.go",
-            "env": {},
-            "args": []
+            "env": { },
+            "args": ["both"]
         }
     ]
 }

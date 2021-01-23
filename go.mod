@@ -1,6 +1,6 @@
 module github.com/sporule/grater
 
-go 1.14
+go 1.15
 
 require (
 	github.com/PuerkitoBio/goquery v1.5.1
@@ -11,6 +11,7 @@ require (
 	github.com/aws/aws-sdk-go v1.36.28 // indirect
 	github.com/gin-contrib/gzip v0.0.3
 	github.com/gin-gonic/gin v1.6.3
+	github.com/go-co-op/gocron v0.5.1
 	github.com/go-playground/validator/v10 v10.4.1 // indirect
 	github.com/gobwas/glob v0.2.3 // indirect
 	github.com/gocolly/colly v1.2.0
@@ -42,5 +43,6 @@ require (
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b // indirect
+	k8s.io/klog/v2 v2.4.0 // indirect
 
 )

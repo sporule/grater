@@ -15,7 +15,7 @@ type Link struct {
 	ID         string `bson:"_id" json:"id,omitempty"`
 	Link       string `json:"link,omitempty"`
 	Status     string `json:"status,omitempty"`
-	Worker     string `json:"worker,omitempty"`
+	Scraper    string `json:"scraper,omitempty"`
 	RuleID     string `json:"ruleID,omitempty"`
 	LastUpdate time.Time
 }
@@ -79,8 +79,8 @@ func UpdateLinksStatusToComplete(ids []string) error {
 	return UpdateManyLinks(filters, updatesFields)
 }
 
-//AllocateLinks returns a set of new links and it will update the links with the worker and status
-func AllocateLinks(ruleID, worker string) ([]Link, error) {
+//AllocateLinks returns a set of new links and it will update the links with the scraper and status
+func AllocateLinks(ruleID, scraper string) ([]Link, error) {
 	links, err := GetLinks(ruleID, utility.Enums().Status.Active, 1)
 	if err != nil {
 		return nil, err
@@ -94,15 +94,15 @@ func AllocateLinks(ruleID, worker string) ([]Link, error) {
 		ids = append(ids, link.ID)
 	}
 	filters := map[string]interface{}{"_id": database.Client.InQry(ids)}
-	updatesFields := map[string]interface{}{"status": utility.Enums().Status.Running, "worker": worker}
+	updatesFields := map[string]interface{}{"status": utility.Enums().Status.Running, "scraper": scraper}
 	return links, UpdateManyLinks(filters, updatesFields)
 }
 
-//ResetInactiveLinks sets tasks that are inactive for more than 30 minutes back to Active with empty worker
+//ResetInactiveLinks sets tasks that are running for more than 1 hour back to Active with empty scraper
 func ResetInactiveLinks() error {
 	//default time is 30 minutes
-	timeLimit := time.Now().Add(-time.Minute * 30)
-	filters := map[string]interface{}{"lastupdate": database.Client.LessThanQry(timeLimit), "status": database.Client.NotEqualQry(utility.Enums().Status.Active)}
-	updatesFields := map[string]interface{}{"status": utility.Enums().Status.Active, "worker": ""}
+	timeLimit := time.Now().Add(-time.Minute * 60)
+	filters := map[string]interface{}{"lastupdate": database.Client.LessThanQry(timeLimit), "status": database.Client.NotEqualQry(utility.Enums().Status.Running)}
+	updatesFields := map[string]interface{}{"status": utility.Enums().Status.Active, "scraper": ""}
 	return UpdateManyLinks(filters, updatesFields)
 }

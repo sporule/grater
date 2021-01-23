@@ -22,9 +22,10 @@ type Rule struct {
 	TargetLocation   string    `json:"targetLocation,omitempty"`
 	LinkPattern      string    `json:"linkPattern,omitempty"`
 	DeepLinkPatterns string    `json:"deeplinkPatterns,omitempty"`
-	TotalPages       int       `json:"pages,omitempty"`
+	TotalPages       int       `json:"totalPages,omitempty"`
 	LastUpdate       time.Time `json:"lastUpdate,omitempty"`
 	Headers          string    `json:"headers,omitempty"`
+	Frequency        int       `json:"frequency,omitempty"`
 }
 
 const ruleTable = "rule"
@@ -51,6 +52,10 @@ func NewRule(name, targetLocation, pattern, linkPattern, deeplinkPatterns, heade
 
 //Upsert updates or inserts rule object to database, it will attach the LastUpdate time stamp to time.now()
 func (rule *Rule) Upsert() error {
+	if utility.IsNil(rule.ID) {
+		id, _ := uuid.NewRandom()
+		rule.ID = id.String()
+	}
 	filters := map[string]interface{}{"_id": rule.ID}
 	rule.LastUpdate = time.Now()
 	return database.Client.UpsertOne(ruleTable, filters, rule)
@@ -70,6 +75,16 @@ func (rule *Rule) GenerateLinks() ([]string, error) {
 		page++
 	}
 	return links, nil
+}
+
+//GenerateAndInsertLinks generates links and Add it to the database
+func (rule *Rule) GenerateAndInsertLinks() error {
+	links, err := rule.GenerateLinks()
+	if err != nil {
+		return err
+	}
+	err = AddLinksRaw(links, rule.ID)
+	return err
 }
 
 //GetRule returns rule by ID
