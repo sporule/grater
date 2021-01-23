@@ -89,11 +89,58 @@
     lastupdate: ISODate('2021-01-15T19:27:51.025Z'),
     linkpattern: 'https://www.amazon.co.uk/s?i=clothing&rh=p_76%3A419158031&dc&page={page}',
     name: 'Amazon Shoes',
-    pattern: '{"name":{"pattern":" div.a-fixed-right-grid-col.ie7-width-935.a-col-left span.a-size-large.product-title-word-break","value":"text"},"price":{"pattern":"div.a-fixed-right-grid-col.ie7-width-935.a-col-left span.a-size-medium.a-color-price.priceBlockBuyingPriceString","value":"text","postprocess":{"split":"-,1"},"validation":{"equation":"parentValue <= value*0.3","targetValue":"parentValue"}}}',
+    pattern: '{"name":{"pattern":" div.a-fixed-right-grid-col.ie7-width-935.a-col-left span.a-size-large.product-title-word-break","value":"text"},"price":{"pattern":"div.a-fixed-right-grid-col.ie7-width-935.a-col-left span.a-size-medium.a-color-price.priceBlockBuyingPriceString","value":"text","postprocess":{"split":"-,1","replace":"£,"},"validation":{"equation":"parentValue <= value*0.3","targetValue":"parentValue"}}}',
     priority: 0,
     status: 'Active',
-    deeplinkPatterns: 'div[data-asin][data-component-type=s-search-result] div.s-expand-height.s-include-content-margin.s-latency-cf-section,span.a-price-whole,a.a-link-normal.a-text-normal,',
+    deeplinkPatterns: 'div[data-asin][data-component-type=s-search-result] div.s-expand-height.s-include-content-margin.s-latency-cf-section,span.a-price-whole,a.a-link-normal.a-text-normal, ',
     targetlocation: 'testStorage',
     headers: '{"accept":"text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9","referer":"https://www.amazon.co.uk/"}',
     totalpages: 50
+}
+
+
+{
+    _id: '535b5e1f-6447-4408-bedd-62d3992f3c3e',
+    lastupdate: ISODate('2021-01-15T19:27:51.025Z'),
+    linkpattern: 'https://www.amazon.co.uk/s?k=shoes&i=shoes&rh=n%3A1769798031%2Cp_76%3A419158031%2Cp_n_size_browse-vebin%3A1919984031%7C1919985031%7C1919986031&s=price-asc-rank&page={page}',
+    name: 'Amazon Shoes',
+    pattern: '{"name":{"pattern":"span.a-size-large.product-title-word-break","value":"text"},"price":{"pattern":"span.a-size-medium.a-color-price.priceBlockBuyingPriceString","value":"text","postprocess":{"split":"-,1","replace":"£,"},"validation":{"equation":"parentValue <= value*0.3","targetValue":"parentValue"}}}',
+    priority: 0,
+    status: 'Active',
+    deeplinkPatterns: 'div[data-asin][data-component-type=s-search-result] div.s-expand-height.s-include-content-margin.s-latency-cf-section,span.a-price-whole,a.a-link-normal.a-text-normal,removeQueryString',
+    targetlocation: 'testStorage',
+    headers: '{"accept":"text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9","accept-encoding":"gzip, deflate, br","accept-language":"en-GB,en;q=0.9,en-US;q=0.8,zh-CN;q=0.7,zh-TW;q=0.6,zh;q=0.5","referer":"https://www.google.co.uk/","sec-fetch-dest": "document","sec-fetch-mode":"navigate","sec-fetch-site":"cross-site","sec-fetch-user": "?1","upgrade-insecure-request":"1","preferanonymous":"1"}',
+    totalpages: 30
+}
+
+
+{
+    _id: '535b5e1f-6447-4408-bedd-62d3992f3c3e',
+    lastupdate: ISODate('2021-01-15T19:27:51.025Z'),
+    linkpattern: 'https://www.amazon.co.uk/s?k=shoes&i=shoes&rh=n%3A1769798031%2Cp_76%3A419158031%2Cp_n_size_browse-vebin%3A1919984031%7C1919985031%7C1919986031&s=price-asc-rank&page={page}',
+    name: 'Amazon Shoes',
+    pattern: '{"name":{"pattern":"span.a-size-large.product-title-word-break","value":"text"},"price":{"pattern":"span.a-size-medium.a-color-price.priceBlockBuyingPriceString","value":"text","postprocess":{"split":"-,1","replace":"£,"},"validation":{"equation":"parentValue <= value*0.8","targetValue":"parentValue"}}}',
+    priority: 0,
+    status: 'Active',
+    deeplinkPatterns: 'div[data-asin][data-component-type=s-search-result] div.s-expand-height.s-include-content-margin.s-latency-cf-section,span.a-price-whole,a.a-link-normal.a-text-normal,removeQueryString,redirect',
+    targetlocation: 'testStorage',
+    headers: '{"accept-encoding":"gzip, deflate, br","accept-language":"en-US,en;q=0.9","referer":"https://www.google.co.uk/"}',
+    totalpages: 30
+}
+
+
+
+
+{
+    _id: '535b5e1f-6447-4408-bedd-62d3992f3c3e',
+    lastupdate: ISODate('2021-01-15T19:27:51.025Z'),
+    linkpattern: 'https://www.amazon.co.uk/s?k=shoes&i=shoes&rh=n%3A1769798031%2Cp_76%3A419158031%2Cp_n_size_browse-vebin%3A1919984031%7C1919985031%7C1919986031&s=price-asc-rank&page={page}',
+    name: 'Amazon Shoes',
+    pattern: '{"name":{"pattern":"span.a-size-large.product-title-word-break","value":"text"},"price":{"pattern":"span.a-size-medium.a-color-price.priceBlockBuyingPriceString","value":"text","postprocess":{"split":"-,1","replace":"£,"},"validation":{"equation":"parentValue <= value*0.8","targetValue":"parentValue"}}}',
+    priority: 0,
+    status: 'Active',
+    deeplinkPatterns: 'div[data-asin][data-component-type=s-search-result] div.s-expand-height.s-include-content-margin.s-latency-cf-section,span.a-price-whole,a.a-link-normal.a-text-normal,removeQueryString,redirect',
+    targetlocation: 'testStorage',
+    headers: '{"accept-encoding":"gzip, deflate, br","accept-language":"en-US,en;q=0.9","referer":"https://www.google.co.uk/"}',
+    totalpages: 30
 }
