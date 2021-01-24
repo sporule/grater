@@ -324,7 +324,7 @@ func (scraper *scraper) setCollector() error {
 		if isWrongPage {
 			html, _ := e.DOM.Html()
 			cookie := e.Request.Headers.Get("cookie")
-			scraper.PageLayoutErrors = append(scraper.PageLayoutErrors, string(requestLink+"\n"+cookie+"\n"+html))
+			scraper.PageLayoutErrors = append(scraper.PageLayoutErrors, requestLink+"*****"+cookie+"*****"+html)
 			log.Println("Page layout not as expected", requestLink)
 			scraper.AddLinkToQueue(e.Request.URL.String())
 			return
