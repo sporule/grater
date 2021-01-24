@@ -77,8 +77,8 @@ func (scraper *scraper) SaveScrapedRecords() error {
 }
 
 func (scraper *scraper) addCookiesToJar(cookies ...string) {
-	if len(scraper.CookiesJar) >= 30 {
-		//maintaining maximum 30 cookies in jar
+	if len(scraper.CookiesJar) >= 200 {
+		//maintaining maximum 200 cookies in jar
 		scraper.CookiesJar = scraper.CookiesJar[len(cookies):]
 	}
 	scraper.CookiesJar = append(scraper.CookiesJar, cookies...)
@@ -329,6 +329,7 @@ func (scraper *scraper) setCollector() error {
 			}
 			log.Println("Page layout not as expected", requestLink)
 			scraper.AddLinkToQueue(e.Request.URL.String())
+			time.Sleep(time.Duration(rand.Int31n(30)) * time.Second)
 			return
 		}
 		if !invalidPage {
