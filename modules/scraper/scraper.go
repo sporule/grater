@@ -322,9 +322,11 @@ func (scraper *scraper) setCollector() error {
 		}
 		value, isWrongPage, invalidPage := parsePattern(e.DOM, pattern, scraper.ParentLinks[requestLink], true)
 		if isWrongPage {
-			html, _ := e.DOM.Html()
-			cookie := e.Request.Headers.Get("cookie")
-			scraper.PageLayoutErrors = append(scraper.PageLayoutErrors, requestLink+"*****"+cookie+"*****"+html)
+			if len(utility.GetEnv("WRITEPAGELAYOUTERROR", "")) > 0 {
+				html, _ := e.DOM.Html()
+				cookie := e.Request.Headers.Get("cookie")
+				scraper.PageLayoutErrors = append(scraper.PageLayoutErrors, requestLink+"*****"+cookie+"*****"+html)
+			}
 			log.Println("Page layout not as expected", requestLink)
 			scraper.AddLinkToQueue(e.Request.URL.String())
 			return
