@@ -320,7 +320,6 @@ func (scraper *scraper) setCollector() error {
 			scraper.AddLinkToQueue(e.Request.URL.String())
 			return
 		}
-		log.Println("Found result")
 		if !invalidPage {
 			value["link"] = requestLink
 			jsonString, err := json.Marshal(value)
@@ -331,7 +330,7 @@ func (scraper *scraper) setCollector() error {
 			scraper.ScrapedRecords = append(scraper.ScrapedRecords, string(jsonString))
 			log.Println("Scraped Success:", value)
 		} else {
-			log.Println("Data recevied is not valid", requestLink)
+			log.Println("Data recevied failed on validation", requestLink)
 		}
 
 	})
