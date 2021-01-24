@@ -27,7 +27,7 @@ func main() {
 
 	//default to run on both mode
 	mode := "both"
-	if len(os.Args) > 0 {
+	if len(os.Args) > 1 {
 		mode = os.Args[1]
 	}
 
