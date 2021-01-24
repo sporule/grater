@@ -36,6 +36,7 @@ type scraper struct {
 	Queue            *queue.Queue
 	ReceviedLinkIDs  []string
 	ScrapedRecords   []string
+	PageLayoutErrors []string
 	TableName        string
 	ParentLinks      map[string]string
 	ParentLinksMutex sync.RWMutex
@@ -67,6 +68,11 @@ func (scraper *scraper) SaveScrapedRecords() error {
 		return err
 	}
 	scraper.ScrapedRecords = make([]string, 0)
+	err = models.InsertManyResults("PageLayoutError", scraper.PageLayoutErrors)
+	if err != nil {
+		return err
+	}
+	scraper.PageLayoutErrors = make([]string, 0)
 	return nil
 }
 
@@ -203,10 +209,10 @@ func (scraper *scraper) setLinksQueue() error {
 			log.Println("Could not find links")
 			return err
 		}
-		threadSizeStr := utility.GetEnv("THREADS", "5")
+		threadSizeStr := utility.GetEnv("THREADS", "3")
 		threadSize, err := strconv.Atoi(threadSizeStr)
 		if err != nil {
-			threadSize = 5
+			threadSize = 3
 		}
 		scraper.Queue, _ = queue.New(
 			threadSize,
@@ -316,6 +322,9 @@ func (scraper *scraper) setCollector() error {
 		}
 		value, isWrongPage, invalidPage := parsePattern(e.DOM, pattern, scraper.ParentLinks[requestLink], true)
 		if isWrongPage {
+			html, _ := e.DOM.Html()
+			cookie := e.Request.Headers.Get("cookie")
+			scraper.PageLayoutErrors = append(scraper.PageLayoutErrors, string(requestLink+"\n"+cookie+"\n"+html))
 			log.Println("Page layout not as expected", requestLink)
 			scraper.AddLinkToQueue(e.Request.URL.String())
 			return
@@ -347,7 +356,7 @@ func (scraper *scraper) setCollector() error {
 	c.OnError(func(r *colly.Response, err error) {
 		log.Println("Failed HTTP", r.StatusCode, err, r.Request.URL)
 		scraper.AddLinkToQueue(r.Request.URL.String())
-		time.Sleep(time.Duration(rand.Int31n(10)) * time.Second)
+		time.Sleep(time.Duration(rand.Int31n(30)) * time.Second)
 	})
 
 	for len(scraper.Proxies) <= 0 && scraper.UseProxy {
