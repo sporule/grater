@@ -36,7 +36,7 @@ func main() {
 		//dist mode only runs distributor
 		router := gin.Default()
 		apiv1.RegisterAPIRoutes(router)
-		router.Run(":" + utility.GetEnv("DISTRIBUTOR_PORT", "9999"))
+		router.Run(":" + utility.GetEnv("PORT", "9999"))
 	case "scraper":
 		for {
 			//scraper mode only runs scraper
@@ -61,6 +61,6 @@ func main() {
 		}()
 		router := gin.Default()
 		apiv1.RegisterAPIRoutes(router)
-		router.Run(":" + utility.GetEnv("DISTRIBUTOR_PORT", "9999"))
+		router.Run(":" + utility.GetEnv("PORT", "9999"))
 	}
 }
