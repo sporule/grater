@@ -259,7 +259,7 @@ func (scraper *scraper) setCollector() error {
 	})
 
 	c.OnHTML("body", func(e *colly.HTMLElement) {
-		requestLink := e.Request.URL.RequestURI()
+		requestLink := e.Request.URL.String()
 		// cookie := scraper.Collector.Cookies(e.Request.URL.String())
 		// scraper.SaveCookie(cookie)
 		linkPatterns := strings.Split(scraper.Rule.DeepLinkPatterns, ",")
@@ -283,9 +283,9 @@ func (scraper *scraper) setCollector() error {
 							testLink := link[:4]
 							if strings.ToLower(testLink) != "http" {
 								if link[:1] == "/" {
-									link = e.Request.URL.Host + link
+									link = e.Request.URL.Scheme + "://" + e.Request.URL.Host + link
 								} else {
-									link = e.Request.URL.Host + "/" + link
+									link = e.Request.URL.Scheme + "://" + e.Request.URL.Host + "/" + link
 								}
 							}
 							scraper.UpdateParentLinks(link, parentValue)
@@ -296,9 +296,9 @@ func (scraper *scraper) setCollector() error {
 					} else {
 						if strings.ToLower(link[:4]) != "http" {
 							if link[:1] == "/" {
-								link = e.Request.URL.Host + link
+								link = e.Request.URL.Scheme + "://" + e.Request.URL.Host + link
 							} else {
-								link = e.Request.URL.Host + "/" + link
+								link = e.Request.URL.Scheme + "://" + e.Request.URL.Host + "/" + link
 							}
 						}
 						scraper.UpdateParentLinks(link, parentValue)
@@ -347,6 +347,7 @@ func (scraper *scraper) setCollector() error {
 	c.OnError(func(r *colly.Response, err error) {
 		log.Println("Failed HTTP", r.StatusCode, err, r.Request.URL)
 		scraper.AddLinkToQueue(r.Request.URL.String())
+		time.Sleep(time.Duration(rand.Int31n(10)) * time.Second)
 	})
 
 	for len(scraper.Proxies) <= 0 && scraper.UseProxy {
@@ -444,6 +445,7 @@ func parsePattern(s *goquery.Selection, item map[string]interface{}, parentValue
 							} else {
 								invalid = true
 							}
+							log.Println(expression)
 
 						}
 					}
