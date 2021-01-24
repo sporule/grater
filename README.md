@@ -12,6 +12,7 @@ Grate is designed to be a distributed scraping tool with a rich ui to achieve hi
 ## TODO List
 
 - [ ] Basic documentation about the rules
+- [ ] Logging mechanism
 - [ ] API EndPoint to generate links
 - [ ] Unit Testing
 - [ ] Basic Admin Panel to control the rules

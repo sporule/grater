@@ -271,7 +271,6 @@ func (scraper *scraper) setCollector() error {
 				parentPageDom.Each(func(index int, elem *goquery.Selection) {
 					parentValue := elem.Find(linkPatterns[1]).First().Text()
 					link, _ := elem.Find(linkPatterns[2]).First().Attr("href")
-					log.Println(link)
 					if len(linkPatterns) >= 4 {
 						//remove query string
 						if linkPatterns[3] == "removeQueryString" {
@@ -317,7 +316,7 @@ func (scraper *scraper) setCollector() error {
 		}
 		value, isWrongPage, invalidPage := parsePattern(e.DOM, pattern, scraper.ParentLinks[requestLink], true)
 		if isWrongPage {
-			//log.Println("Page layout not as expected", requestLink)
+			log.Println("Page layout not as expected", requestLink)
 			scraper.AddLinkToQueue(e.Request.URL.String())
 			return
 		}
@@ -326,11 +325,13 @@ func (scraper *scraper) setCollector() error {
 			value["link"] = requestLink
 			jsonString, err := json.Marshal(value)
 			if err != nil {
-				//log.Println("Data recevied is not valid")
+				log.Println("Validated data is not valid json")
 				return
 			}
 			scraper.ScrapedRecords = append(scraper.ScrapedRecords, string(jsonString))
 			log.Println("Scraped Success:", value)
+		} else {
+			log.Println("Data recevied is not valid", requestLink)
 		}
 
 	})
