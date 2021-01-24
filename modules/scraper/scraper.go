@@ -77,19 +77,21 @@ func (scraper *scraper) SaveScrapedRecords() error {
 }
 
 func (scraper *scraper) addCookiesToJar(cookies ...string) {
-	if len(scraper.CookiesJar) >= 200 {
-		//maintaining maximum 200 cookies in jar
-		scraper.CookiesJar = scraper.CookiesJar[len(cookies):]
-	}
-	scraper.CookiesJar = append(scraper.CookiesJar, cookies...)
+	// if len(scraper.CookiesJar) >= 200 {
+	// 	//maintaining maximum 200 cookies in jar
+	// 	scraper.CookiesJar = scraper.CookiesJar[len(cookies):]
+	// }
+	// scraper.CookiesJar = append(scraper.CookiesJar, cookies...)
+	scraper.Cookie = cookies[0]
 }
 
 func (scraper *scraper) getCookie() string {
-	if len(scraper.CookiesJar) > 0 {
-		randomIndex := rand.Intn(len(scraper.CookiesJar))
-		return scraper.CookiesJar[randomIndex]
-	}
-	return ""
+	// if len(scraper.CookiesJar) > 0 {
+	// 	randomIndex := rand.Intn(len(scraper.CookiesJar))
+	// 	return scraper.CookiesJar[randomIndex]
+	// }
+	// return ""
+	return scraper.Cookie
 }
 
 func (scraper *scraper) setProxies() error {
@@ -209,10 +211,10 @@ func (scraper *scraper) setLinksQueue() error {
 			log.Println("Could not find links")
 			return err
 		}
-		threadSizeStr := utility.GetEnv("THREADS", "3")
+		threadSizeStr := utility.GetEnv("THREADS", "20")
 		threadSize, err := strconv.Atoi(threadSizeStr)
 		if err != nil {
-			threadSize = 3
+			threadSize = 20
 		}
 		scraper.Queue, _ = queue.New(
 			threadSize,
@@ -258,10 +260,11 @@ func (scraper *scraper) setCollector() error {
 				r.Headers.Set(k, v)
 			}
 		}
-		if time.Now().Second()%2 == 0 || time.Now().Second()%3 == 0 {
-			//only set the server cookie in a percentage
-			r.Headers.Set("cookie", scraper.getCookie())
-		}
+		// if time.Now().Second()%2 == 0 || time.Now().Second()%3 == 0 {
+		// 	//only set the server cookie in a percentage
+		// 	r.Headers.Set("cookie", scraper.getCookie())
+		// }
+		r.Headers.Set("cookie", scraper.getCookie())
 	})
 
 	c.OnHTML("body", func(e *colly.HTMLElement) {
@@ -327,9 +330,11 @@ func (scraper *scraper) setCollector() error {
 				cookie := e.Request.Headers.Get("cookie")
 				scraper.PageLayoutErrors = append(scraper.PageLayoutErrors, requestLink+"*****"+cookie+"*****"+html)
 			}
-			log.Println("Page layout not as expected", requestLink)
+			//log.Println("Page layout not as expected,change cookie", requestLink)
+			//remove bad cookie
+			scraper.Cookie = ""
 			scraper.AddLinkToQueue(e.Request.URL.String())
-			time.Sleep(time.Duration(rand.Int31n(30)) * time.Second)
+			//time.Sleep(time.Duration(rand.Int31n(30)) * time.Second)
 			return
 		}
 		if !invalidPage {
@@ -357,9 +362,9 @@ func (scraper *scraper) setCollector() error {
 	})
 
 	c.OnError(func(r *colly.Response, err error) {
-		log.Println("Failed HTTP", r.StatusCode, err, r.Request.URL)
+		//log.Println("Failed HTTP", r.StatusCode, err, r.Request.URL)
 		scraper.AddLinkToQueue(r.Request.URL.String())
-		time.Sleep(time.Duration(rand.Int31n(30)) * time.Second)
+		// time.Sleep(time.Duration(rand.Int31n(30)) * time.Second)
 	})
 
 	for len(scraper.Proxies) <= 0 && scraper.UseProxy {
