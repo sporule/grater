@@ -25,6 +25,10 @@ func main() {
 		return
 	}
 
+	env := utility.GetEnv("ENV", "dev")
+	if env != "dev" {
+		gin.SetMode(gin.ReleaseMode)
+	}
 	//default to run on both mode
 	mode := "both"
 	if len(os.Args) > 1 {
