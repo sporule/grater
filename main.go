@@ -26,7 +26,10 @@ func main() {
 	}
 
 	//default to run on both mode
-	mode := os.Args[1]
+	mode := "both"
+	if len(os.Args) > 0 {
+		mode = os.Args[1]
+	}
 
 	switch mode {
 	case "dist":
