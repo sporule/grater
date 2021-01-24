@@ -37,11 +37,12 @@ func runTimerJobs() {
 	for _, rule := range rules {
 		//setting timer jobs
 		if rule.Frequency > 0 {
+			//generate rules
 			scheduler.Every(uint64(rule.Frequency)).Seconds().Do(rule.GenerateAndInsertLinks)
 		}
 	}
 	//reset dead running links
-	scheduler.Every(30).Minutes().Do(models.ResetInactiveLinks)
+	scheduler.Every(30).Minutes().StartAt(time.Now().Add(time.Duration(31 * time.Minute))).Do(models.ResetInactiveLinks)
 	scheduler.StartAsync()
 	log.Println("Timer Jobs registered.")
 }

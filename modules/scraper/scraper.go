@@ -203,10 +203,10 @@ func (scraper *scraper) setLinksQueue() error {
 			log.Println("Could not find links")
 			return err
 		}
-		threadSizeStr := utility.GetEnv("THREADS", "20")
+		threadSizeStr := utility.GetEnv("THREADS", "5")
 		threadSize, err := strconv.Atoi(threadSizeStr)
 		if err != nil {
-			threadSize = 20
+			threadSize = 5
 		}
 		scraper.Queue, _ = queue.New(
 			threadSize,
@@ -445,8 +445,6 @@ func parsePattern(s *goquery.Selection, item map[string]interface{}, parentValue
 							} else {
 								invalid = true
 							}
-							log.Println(expression)
-
 						}
 					}
 				}

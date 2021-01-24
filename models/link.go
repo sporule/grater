@@ -102,7 +102,14 @@ func AllocateLinks(ruleID, scraper string) ([]Link, error) {
 func ResetInactiveLinks() error {
 	//default time is 30 minutes
 	timeLimit := time.Now().Add(-time.Minute * 60)
-	filters := map[string]interface{}{"lastupdate": database.Client.LessThanQry(timeLimit), "status": database.Client.NotEqualQry(utility.Enums().Status.Running)}
+	filters := map[string]interface{}{"lastupdate": database.Client.LessThanQry(timeLimit), "status": utility.Enums().Status.Running}
 	updatesFields := map[string]interface{}{"status": utility.Enums().Status.Active, "scraper": ""}
+	return UpdateManyLinks(filters, updatesFields)
+}
+
+//CancelInactiveLinks sets the incompleted links status to cancelled for given rule id
+func CancelInactiveLinks(ruleID string) error {
+	filters := map[string]interface{}{"ruleid": ruleID, "status": database.Client.NotEqualQry(utility.Enums().Status.Completed)}
+	updatesFields := map[string]interface{}{"status": utility.Enums().Status.Cancelled, "scraper": ""}
 	return UpdateManyLinks(filters, updatesFields)
 }

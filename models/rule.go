@@ -77,8 +77,9 @@ func (rule *Rule) GenerateLinks() ([]string, error) {
 	return links, nil
 }
 
-//GenerateAndInsertLinks generates links and Add it to the database
+//GenerateAndInsertLinks generates links and Add it to the database, it also resets the incompleted links
 func (rule *Rule) GenerateAndInsertLinks() error {
+	CancelInactiveLinks(rule.ID)
 	links, err := rule.GenerateLinks()
 	if err != nil {
 		return err

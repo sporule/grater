@@ -131,5 +131,5 @@ func (db *MongoDB) LessThanQry(value interface{}) interface{} {
 
 //NotEqualQry take a value and returns "not" query
 func (db *MongoDB) NotEqualQry(value interface{}) interface{} {
-	return mgoqry.Bson("$not", value)
+	return mgoqry.Bson("$ne", value)
 }
