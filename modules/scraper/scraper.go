@@ -557,7 +557,7 @@ func parsePattern(s *goquery.Selection, item map[string]interface{}, parentValue
 //proxyCheck code from https://github.com/asm-jaime/go-proxycheck
 func proxyCheck(proxies []string, proxyType string, testLink string) (validatedProxies []string, cookies []string) {
 	c := make(chan string)
-	timeout := math.Max(float64(len(proxies))*0.02, 10.0)
+	timeout := math.Max(float64(len(proxies))*0.01, 10.0)
 	log.Println("Validating Proxies, it could take:", timeout, "seconds")
 	for _, prox := range proxies {
 		go func(prox string) {
