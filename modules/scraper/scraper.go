@@ -47,6 +47,7 @@ type scraper struct {
 	UseProxy                bool
 	ProfileChangedTimeStamp time.Time
 	PrfileChangedMutex      sync.RWMutex
+	PendingLinks            []string
 }
 
 func (scraper *scraper) UpdateParentLinks(link, value string) {
@@ -230,7 +231,7 @@ func (scraper *scraper) setRule() error {
 	return nil
 }
 
-func (scraper *scraper) setLinksQueue() error {
+func (scraper *scraper) GetLinks() error {
 	if api := utility.GetEnv("DISTRIBUTOR_API", "http://localhost:9999/api/v1/dist"); !utility.IsNil(api) {
 		//obtain the links
 		res, err := http.Get(api + "/links?ruleid=" + scraper.Rule.ID + "&scraper=" + scraper.ID)
@@ -252,6 +253,18 @@ func (scraper *scraper) setLinksQueue() error {
 			log.Println("Could not find links")
 			return err
 		}
+		for _, link := range links {
+			scraper.ReceviedLinkIDs = append(scraper.ReceviedLinkIDs, link.ID)
+			scraper.PendingLinks = append(scraper.PendingLinks, link.Link)
+		}
+	} else {
+		return errors.New("API Not found")
+	}
+	return nil
+}
+
+func (scraper *scraper) setLinksQueue() error {
+	if len(scraper.PendingLinks) > 0 {
 		threadSizeStr := utility.GetEnv("THREADS", "20")
 		threadSize, err := strconv.Atoi(threadSizeStr)
 		if err != nil {
@@ -261,18 +274,15 @@ func (scraper *scraper) setLinksQueue() error {
 			threadSize,
 			&queue.InMemoryQueueStorage{MaxSize: 100000}, // Use default queue storage
 		)
-		for _, link := range links {
-			scraper.ReceviedLinkIDs = append(scraper.ReceviedLinkIDs, link.ID)
-			scraper.Queue.AddURL(link.Link)
+		for _, link := range scraper.PendingLinks {
+			scraper.Queue.AddURL(link)
 		}
-	} else {
-		return errors.New("API Not found")
 	}
 	return nil
 }
 
 func (scraper *scraper) AddLinkToQueue(url string) {
-	scraper.Queue.AddURL(url)
+	scraper.PendingLinks = append(scraper.PendingLinks, url)
 }
 
 func (scraper *scraper) setCollector() error {
@@ -282,13 +292,11 @@ func (scraper *scraper) setCollector() error {
 	c.Limit(&colly.LimitRule{
 		RandomDelay: 10 * time.Second,
 	})
-	c.WithTransport(&http.Transport{
-		DisableKeepAlives: true,
-	})
 	extensions.RandomUserAgent(c)
 	c.DisableCookies()
 	c.IgnoreRobotsTxt = true
 	c.AllowURLRevisit = true
+
 	//set headers
 	var headers map[string]string
 	err := json.Unmarshal([]byte(scraper.Rule.Headers), &headers)
@@ -424,7 +432,7 @@ func (scraper *scraper) setCollector() error {
 
 	for len(scraper.Proxies) <= 0 && scraper.UseProxy {
 		log.Println("Waiting for the Proxy...")
-		time.Sleep(10 * time.Second)
+		time.Sleep(20 * time.Second)
 	}
 	c.SetProxyFunc(scraper.ProxySwitcher)
 
@@ -624,11 +632,14 @@ func getCookieFromRespList(respCookies []string) string {
 func StartScraping() error {
 	log.Println("Scraper started")
 	scraper, _ := new()
+	//Get Rule
 	err := scraper.setRule()
+	//Get Links from Rule
+	scraper.GetLinks()
 	if !utility.IsNil(err) {
 		return err
 	}
-	//get new proxies every 2 minutes
+	//get new proxies periodically
 	go func() {
 		for {
 			scraper.setProxies()
@@ -646,20 +657,23 @@ func StartScraping() error {
 		log.Println(err)
 		return err
 	}
-	scraper.setCollector()
-	err = scraper.setLinksQueue()
-	if !utility.IsNil(err) {
-		return err
-	}
+	for len(scraper.PendingLinks) > 0 {
+		log.Println("Refreshing collector,queue,proxies and cookies...")
+		scraper.setCollector()
+		err = scraper.setLinksQueue()
+		if !utility.IsNil(err) {
+			return err
+		}
 
-	for scraper.Collector == nil {
-		log.Println("Waiting for collector to be ready")
-		time.Sleep(10 * time.Second)
+		for scraper.Collector == nil {
+			log.Println("Waiting for collector to be ready")
+			time.Sleep(10 * time.Second)
+		}
+		err = scraper.Queue.Run(scraper.Collector)
+		log.Println(err)
+		scraper.setLinksToComplete()
+		scraper.SaveScrapedRecords()
 	}
-	err = scraper.Queue.Run(scraper.Collector)
-	log.Println(err)
-	scraper.setLinksToComplete()
-	scraper.SaveScrapedRecords()
 	log.Println("Scraper Completed")
 	return nil
 }
