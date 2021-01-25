@@ -671,9 +671,9 @@ func StartScraping() error {
 		}
 		err = scraper.Queue.Run(scraper.Collector)
 		log.Println(err)
-		scraper.setLinksToComplete()
-		scraper.SaveScrapedRecords()
 	}
+	scraper.setLinksToComplete()
+	scraper.SaveScrapedRecords()
 	log.Println("Scraper Completed")
 	return nil
 }
