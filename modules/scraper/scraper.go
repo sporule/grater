@@ -88,7 +88,7 @@ func (scraper *scraper) ChangeProfile(isProxy, isCookies bool) {
 			time.Sleep(20 * time.Second)
 		}
 	}
-	if scraper.ProfileChangedTimeStamp.Add(30 * time.Second).Before(time.Now()) {
+	if scraper.ProfileChangedTimeStamp.Add(10 * time.Second).Before(time.Now()) {
 		if isCookies {
 			if len(scraper.CookiesJar) > 1 {
 				scraper.Cookie = scraper.CookiesJar[0]
