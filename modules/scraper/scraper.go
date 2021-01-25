@@ -79,21 +79,27 @@ func (scraper *scraper) SaveScrapedRecords() error {
 	return nil
 }
 
-func (scraper *scraper) ChangeProfile() {
+func (scraper *scraper) ChangeProfile(isProxy, isCookies bool) {
 	scraper.PrfileChangedMutex.Lock()
-	for len(scraper.Proxies) <= 1 {
-		log.Println("Waiting for proxy")
-		time.Sleep(20 * time.Second)
-	}
-	if scraper.ProfileChangedTimeStamp.Add(2 * time.Second).Before(time.Now()) {
-		if len(scraper.CookiesJar) > 1 {
-			scraper.Cookie = scraper.CookiesJar[0]
-			//reset cookies
-			scraper.CookiesJar = scraper.CookiesJar[1:]
+	if isProxy {
+		for len(scraper.Proxies) <= 1 {
+			log.Println("Waiting for proxy")
+			time.Sleep(20 * time.Second)
 		}
-		//reset proxies
-		scraper.Proxies = scraper.Proxies[1:]
-		scraper.ProfileChangedTimeStamp = time.Now()
+	}
+	if scraper.ProfileChangedTimeStamp.Add(30 * time.Second).Before(time.Now()) {
+		if isCookies {
+			if len(scraper.CookiesJar) > 1 {
+				scraper.Cookie = scraper.CookiesJar[0]
+				//reset cookies
+				scraper.CookiesJar = scraper.CookiesJar[1:]
+			}
+		}
+		if isProxy {
+			//reset proxies
+			scraper.Proxies = scraper.Proxies[1:]
+			scraper.ProfileChangedTimeStamp = time.Now()
+		}
 		log.Println("Profile Changed, proxies:", len(scraper.Proxies), "cookies:", len(scraper.CookiesJar))
 	}
 	scraper.PrfileChangedMutex.Unlock()
@@ -109,7 +115,8 @@ func (scraper *scraper) addCookiesToJar(cookies ...string) {
 	// 	}
 	// }
 	// scraper.CookiesJar = append(scraper.CookiesJar, cookies...)
-	scraper.Cookie = cookies[0]
+	scraper.Cookie += cookies[0]
+	log.Println("Latest Cookies:", scraper.Cookie)
 
 }
 
@@ -365,7 +372,12 @@ func (scraper *scraper) setCollector() error {
 			}
 			//log.Println("Page layout not as expected,change cookie", requestLink)
 			//change cookie and proxy
-			scraper.ChangeProfile()
+			if time.Now().Second()%5 == 0 {
+				scraper.ChangeProfile(false, true)
+			} else {
+				scraper.ChangeProfile(true, true)
+			}
+
 			scraper.AddLinkToQueue(e.Request.URL.String())
 			//time.Sleep(time.Duration(rand.Int31n(30)) * time.Second)
 			return
@@ -389,7 +401,6 @@ func (scraper *scraper) setCollector() error {
 		cookie := getCookieFromRespList(r.Headers.Values("set-cookie"))
 		if !utility.IsNil(cookie) {
 			//get server cookie mannually
-			log.Println(cookie)
 			scraper.addCookiesToJar(cookie)
 		}
 
@@ -397,7 +408,11 @@ func (scraper *scraper) setCollector() error {
 
 	c.OnError(func(r *colly.Response, err error) {
 		//log.Println("Failed HTTP", r.StatusCode, err, r.Request.URL)
-		scraper.ChangeProfile()
+		if r.StatusCode <= 10 {
+			scraper.ChangeProfile(true, false)
+		} else {
+			scraper.ChangeProfile(true, true)
+		}
 		scraper.AddLinkToQueue(r.Request.URL.String())
 		// time.Sleep(time.Duration(rand.Int31n(30)) * time.Second)
 	})
@@ -557,7 +572,7 @@ func parsePattern(s *goquery.Selection, item map[string]interface{}, parentValue
 //proxyCheck code from https://github.com/asm-jaime/go-proxycheck
 func proxyCheck(proxies []string, proxyType string, testLink string) (validatedProxies []string, cookies []string) {
 	c := make(chan string)
-	timeout := math.Max(float64(len(proxies))*0.01, 10.0)
+	timeout := math.Max(float64(len(proxies))*0.02, 10.0)
 	log.Println("Validating Proxies, it could take:", timeout, "seconds")
 	for _, prox := range proxies {
 		go func(prox string) {
@@ -612,7 +627,7 @@ func StartScraping() error {
 	go func() {
 		for {
 			scraper.setProxies()
-			time.Sleep(2 * time.Minute)
+			time.Sleep(3 * time.Minute)
 		}
 	}()
 	//save data to database very minute

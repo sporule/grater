@@ -2,6 +2,7 @@ package apiv1
 
 import (
 	"log"
+	"net/http"
 	"time"
 
 	"github.com/gin-contrib/gzip"
@@ -9,6 +10,7 @@ import (
 	"github.com/go-co-op/gocron"
 	"github.com/sporule/grater/models"
 	"github.com/sporule/grater/modules/apis/apiv1/controllers"
+	"github.com/sporule/grater/modules/utility"
 )
 
 //RegisterAPIRoutes registers all api routers
@@ -25,6 +27,17 @@ func RegisterAPIRoutes(router *gin.Engine) {
 //registerEndpoints register the core end points
 func registerEndpoints(router *gin.RouterGroup) {
 	controllers.InitiateDistRouters(router)
+	router.GET("/heartbeat", heartbeatController)
+}
+
+func heartbeatController(c *gin.Context) {
+	res := make(chan utility.Result)
+	go func() {
+		res <- utility.Result{Code: http.StatusOK, Obj: c.ClientIP()}
+		return
+	}()
+	result := <-res
+	c.JSON(result.Expand())
 }
 
 //runTimerJobs runs timerjobs to refresh the links
