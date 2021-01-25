@@ -135,7 +135,7 @@ func (scraper *scraper) setProxies() error {
 		return err
 	}
 	scraper.Proxies = append(scraper.Proxies, proxies...)
-	scraper.addCookiesToJar(cookies...)
+	scraper.CookiesJar = append(scraper.CookiesJar, cookies...)
 	log.Println("Proxy obtained, size:", len(proxies), "cookies, size:", len(cookies))
 	return nil
 }
