@@ -608,11 +608,11 @@ func StartScraping() error {
 	if !utility.IsNil(err) {
 		return err
 	}
-	//get new proxies every 5 minutes
+	//get new proxies every 2 minutes
 	go func() {
 		for {
 			scraper.setProxies()
-			time.Sleep(6 * time.Minute)
+			time.Sleep(2 * time.Minute)
 		}
 	}()
 	//save data to database very minute
