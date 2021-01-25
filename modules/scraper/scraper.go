@@ -8,6 +8,7 @@ import (
 	"go/types"
 	"io/ioutil"
 	"log"
+	"math"
 	"math/rand"
 	"net/http"
 	"net/url"
@@ -29,21 +30,23 @@ import (
 
 //scraper is the struct for scraper
 type scraper struct {
-	ID               string `json:"id,omitempty"`
-	Collector        *colly.Collector
-	Proxies          []string
-	Rule             models.Rule
-	Queue            *queue.Queue
-	ReceviedLinkIDs  []string
-	ScrapedRecords   []string
-	PageLayoutErrors []string
-	TableName        string
-	ParentLinks      map[string]string
-	ParentLinksMutex sync.RWMutex
-	Headers          map[string]string
-	Cookie           string
-	CookiesJar       []string
-	UseProxy         bool
+	ID                      string `json:"id,omitempty"`
+	Collector               *colly.Collector
+	Proxies                 []string
+	Rule                    models.Rule
+	Queue                   *queue.Queue
+	ReceviedLinkIDs         []string
+	ScrapedRecords          []string
+	PageLayoutErrors        []string
+	TableName               string
+	ParentLinks             map[string]string
+	ParentLinksMutex        sync.RWMutex
+	Headers                 map[string]string
+	Cookie                  string
+	CookiesJar              []string
+	UseProxy                bool
+	ProfileChangedTimeStamp time.Time
+	PrfileChangedMutex      sync.RWMutex
 }
 
 func (scraper *scraper) UpdateParentLinks(link, value string) {
@@ -76,26 +79,50 @@ func (scraper *scraper) SaveScrapedRecords() error {
 	return nil
 }
 
+func (scraper *scraper) ChangeProfile() {
+	scraper.PrfileChangedMutex.Lock()
+	for len(scraper.Proxies) <= 1 {
+		log.Println("Waiting for proxy")
+		time.Sleep(20 * time.Second)
+	}
+	if scraper.ProfileChangedTimeStamp.Add(2 * time.Second).Before(time.Now()) {
+		if len(scraper.CookiesJar) > 1 {
+			scraper.Cookie = scraper.CookiesJar[0]
+			//reset cookies
+			scraper.CookiesJar = scraper.CookiesJar[1:]
+		}
+		//reset proxies
+		scraper.Proxies = scraper.Proxies[1:]
+		scraper.ProfileChangedTimeStamp = time.Now()
+		log.Println("Profile Changed, proxies:", len(scraper.Proxies), "cookies:", len(scraper.CookiesJar))
+	}
+	scraper.PrfileChangedMutex.Unlock()
+}
+
 func (scraper *scraper) addCookiesToJar(cookies ...string) {
-	// if len(scraper.CookiesJar) >= 200 {
-	// 	//maintaining maximum 200 cookies in jar
-	// 	scraper.CookiesJar = scraper.CookiesJar[len(cookies):]
+	// if len(scraper.CookiesJar) > 30 {
+	// 	// maintain 30 cookies to ensure it is up to date
+	// 	if len(scraper.CookiesJar) <= len(cookies) {
+	// 		scraper.CookiesJar = cookies
+	// 	} else {
+	// 		scraper.CookiesJar = scraper.CookiesJar[len(cookies):]
+	// 	}
 	// }
 	// scraper.CookiesJar = append(scraper.CookiesJar, cookies...)
 	scraper.Cookie = cookies[0]
+
 }
 
 func (scraper *scraper) getCookie() string {
 	// if len(scraper.CookiesJar) > 0 {
-	// 	randomIndex := rand.Intn(len(scraper.CookiesJar))
-	// 	return scraper.CookiesJar[randomIndex]
+	// 	return scraper.CookiesJar[0]
 	// }
 	// return ""
 	return scraper.Cookie
 }
 
 func (scraper *scraper) setProxies() error {
-	scraper.Proxies = make([]string, 0)
+	log.Println("Getting Proxies")
 	proxyAPIStr := utility.GetEnv("PROXY_API", "socks5%https://api.proxyscrape.com/v2/?request=getproxies&protocol=socks5&timeout=10000&country=all")
 	proxyProtocol := strings.Split(proxyAPIStr, "%")[0]
 	proxyLink := strings.Split(proxyAPIStr, "%")[1]
@@ -103,15 +130,17 @@ func (scraper *scraper) setProxies() error {
 	if utility.IsNil(proxyProtocol, proxyLink, testLink) {
 		return errors.New("Can't read proxy configuration, disabling proxy")
 	}
-	proxies, err := getProxies(proxyLink, proxyProtocol, testLink)
+	proxies, cookies, err := getProxies(proxyLink, proxyProtocol, testLink)
 	if err != nil {
 		return err
 	}
 	scraper.Proxies = append(scraper.Proxies, proxies...)
+	scraper.addCookiesToJar(cookies...)
+	log.Println("Proxy obtained, size:", len(proxies), "cookies, size:", len(cookies))
 	return nil
 }
 
-func getProxies(link, proxyType, testLink string) (fullProxies []string, err error) {
+func getProxies(link, proxyType, testLink string) (fullProxies []string, cookies []string, err error) {
 	res, err := http.Get(link)
 	if res.Body != nil {
 		defer res.Body.Close()
@@ -119,15 +148,18 @@ func getProxies(link, proxyType, testLink string) (fullProxies []string, err err
 	body, err := ioutil.ReadAll(res.Body)
 	if err != nil {
 		log.Println("Unable to obtain Proxy")
-		return nil, err
+		return nil, nil, err
 	}
 	proxies := strings.Split(string(body), "\r\n")
-	validatedProxies := proxyCheck(proxies, proxyType, testLink)
+	if len(proxies) <= 1 {
+		proxies = strings.Split(string(body), "\n")
+	}
+	validatedProxies, cookies := proxyCheck(proxies, proxyType, testLink)
 	log.Println("Proxies:", len(proxies), "Validated:", len(validatedProxies))
 	for _, proxy := range validatedProxies {
 		fullProxies = append(fullProxies, proxyType+"://"+proxy)
 	}
-	return fullProxies, nil
+	return fullProxies, cookies, nil
 }
 
 func (scraper *scraper) setLinksToComplete() error {
@@ -255,6 +287,7 @@ func (scraper *scraper) setCollector() error {
 	}
 
 	c.OnRequest(func(r *colly.Request) {
+		time.Sleep(time.Duration(rand.Int31n(5)) * time.Second)
 		if scraper.Headers != nil {
 			for k, v := range scraper.Headers {
 				r.Headers.Set(k, v)
@@ -331,8 +364,8 @@ func (scraper *scraper) setCollector() error {
 				scraper.PageLayoutErrors = append(scraper.PageLayoutErrors, requestLink+"*****"+cookie+"*****"+html)
 			}
 			//log.Println("Page layout not as expected,change cookie", requestLink)
-			//remove bad cookie
-			scraper.Cookie = ""
+			//change cookie and proxy
+			scraper.ChangeProfile()
 			scraper.AddLinkToQueue(e.Request.URL.String())
 			//time.Sleep(time.Duration(rand.Int31n(30)) * time.Second)
 			return
@@ -353,9 +386,10 @@ func (scraper *scraper) setCollector() error {
 	})
 
 	c.OnResponse(func(r *colly.Response) {
-		cookie := r.Headers.Get("set-cookie")
+		cookie := getCookieFromRespList(r.Headers.Values("set-cookie"))
 		if !utility.IsNil(cookie) {
 			//get server cookie mannually
+			log.Println(cookie)
 			scraper.addCookiesToJar(cookie)
 		}
 
@@ -363,13 +397,14 @@ func (scraper *scraper) setCollector() error {
 
 	c.OnError(func(r *colly.Response, err error) {
 		//log.Println("Failed HTTP", r.StatusCode, err, r.Request.URL)
+		scraper.ChangeProfile()
 		scraper.AddLinkToQueue(r.Request.URL.String())
 		// time.Sleep(time.Duration(rand.Int31n(30)) * time.Second)
 	})
 
 	for len(scraper.Proxies) <= 0 && scraper.UseProxy {
 		log.Println("Waiting for the Proxy...")
-		time.Sleep(5 * time.Second)
+		time.Sleep(10 * time.Second)
 	}
 	c.SetProxyFunc(scraper.ProxySwitcher)
 
@@ -382,7 +417,7 @@ func (scraper *scraper) ProxySwitcher(pr *http.Request) (*url.URL, error) {
 	for len(scraper.Proxies) <= 0 {
 		time.Sleep(1 * time.Second)
 	}
-	proxyStr := scraper.Proxies[rand.Intn(len(scraper.Proxies))]
+	proxyStr := scraper.Proxies[0] //always return the first proxy
 	proxy := &url.URL{Scheme: strings.Split(proxyStr, "://")[0], Host: strings.Split(proxyStr, "://")[1]}
 	return proxy, nil
 }
@@ -520,14 +555,26 @@ func parsePattern(s *goquery.Selection, item map[string]interface{}, parentValue
 }
 
 //proxyCheck code from https://github.com/asm-jaime/go-proxycheck
-func proxyCheck(proxies []string, proxyType string, testLink string) (validatedProxies []string) {
+func proxyCheck(proxies []string, proxyType string, testLink string) (validatedProxies []string, cookies []string) {
 	c := make(chan string)
+	timeout := math.Max(float64(len(proxies))*0.02, 10.0)
+	log.Println("Validating Proxies, it could take:", timeout, "seconds")
 	for _, prox := range proxies {
 		go func(prox string) {
 			proxyURL, err := url.Parse(proxyType + "://" + prox)
-			client := &http.Client{Transport: &http.Transport{Proxy: http.ProxyURL(proxyURL)}, Timeout: 5 * time.Second}
-			res, err := client.Get(testLink)
+			client := &http.Client{Transport: &http.Transport{Proxy: http.ProxyURL(proxyURL)}, Timeout: time.Duration(timeout) * time.Second}
+			req, err := http.NewRequest("GET", testLink, nil)
+			req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/88.0.4324.96 Safari/537.36 Edg/88.0.705.50")
+			req.Header.Set("accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9")
+			req.Header.Set("accept-encoding", "gzip, deflate, br")
+			req.Header.Set("accept-language", "en-GB,en;q=0.9,en-US;q=0.8,zh-CN;q=0.7,zh-TW;q=0.6,zh;q=0.5")
+			req.Header.Set("cache-control", "max-age=100")
+			res, err := client.Do(req)
 			if err == nil && res.StatusCode <= 299 {
+				cookie := getCookieFromRespList(res.Header.Values("set-cookie"))
+				if len(cookie) > 0 {
+					cookies = append(cookies, cookie)
+				}
 				c <- prox
 			} else {
 				c <- ""
@@ -542,7 +589,15 @@ func proxyCheck(proxies []string, proxyType string, testLink string) (validatedP
 		}
 
 	}
-	return validatedProxies
+	return validatedProxies, cookies
+}
+
+func getCookieFromRespList(respCookies []string) string {
+	cookie := ""
+	for _, v := range respCookies {
+		cookie += strings.Split(v, ";")[0] + "; "
+	}
+	return cookie
 }
 
 //StartScraping fires of the scraping process
@@ -557,8 +612,7 @@ func StartScraping() error {
 	go func() {
 		for {
 			scraper.setProxies()
-			scraper.CookiesJar = make([]string, 0)
-			time.Sleep(5 * time.Minute)
+			time.Sleep(6 * time.Minute)
 		}
 	}()
 	//save data to database very minute

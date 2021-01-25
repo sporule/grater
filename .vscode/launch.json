@@ -11,7 +11,9 @@
             "mode": "auto",
             "program": "${workspaceRoot}/main.go",
             "env": { 
-                "PROXY_API":"http%https://api.proxyscrape.com/v2/?request=getproxies&protocol=http&timeout=10000&country=all&ssl=all&anonymity=all"
+                "PROXY_API":"http%https://api.proxyscrape.com/v2/?request=getproxies&protocol=http&timeout=10000&country=all&ssl=all&anonymity=all",
+                "THREADS":"20",
+                "ITEM_PER_PAGE":"1"
             },
             "args": ["both"]
         }
