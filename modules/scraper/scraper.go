@@ -669,8 +669,7 @@ func StartScraping() error {
 			log.Println("Waiting for collector to be ready")
 			time.Sleep(10 * time.Second)
 		}
-		err = scraper.Queue.Run(scraper.Collector)
-		log.Println(err)
+		scraper.Queue.Run(scraper.Collector)
 	}
 	scraper.setLinksToComplete()
 	scraper.SaveScrapedRecords()
