@@ -280,6 +280,9 @@ func (scraper *scraper) setCollector() error {
 	c.Limit(&colly.LimitRule{
 		RandomDelay: 10 * time.Second,
 	})
+	c.WithTransport(&http.Transport{
+		DisableKeepAlives: true,
+	})
 	extensions.RandomUserAgent(c)
 	c.DisableCookies()
 	c.IgnoreRobotsTxt = true
