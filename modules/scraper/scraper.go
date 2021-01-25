@@ -94,12 +94,14 @@ func (scraper *scraper) ChangeProfile(isProxy, isCookies bool) {
 				//reset cookies
 				scraper.CookiesJar = scraper.CookiesJar[1:]
 			}
+			scraper.ProfileChangedTimeStamp = time.Now()
 		}
 		if isProxy {
 			//reset proxies
 			scraper.Proxies = scraper.Proxies[1:]
 			scraper.ProfileChangedTimeStamp = time.Now()
 		}
+
 		log.Println("Profile Changed, proxies:", len(scraper.Proxies), "cookies:", len(scraper.CookiesJar))
 	}
 	scraper.PrfileChangedMutex.Unlock()
