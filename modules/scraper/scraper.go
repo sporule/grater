@@ -277,6 +277,8 @@ func (scraper *scraper) setLinksQueue() error {
 		for _, link := range scraper.PendingLinks {
 			scraper.Queue.AddURL(link)
 		}
+                scraper.PendingLinks = make([]string,0)
+
 	}
 	return nil
 }
