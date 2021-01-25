@@ -662,7 +662,7 @@ func StartScraping() error {
 	for len(scraper.PendingLinks) > 0 {
 		sleepLength := rand.Int31n(120)
 		log.Println("Refreshing collector,queue,proxies and cookies,sleep for ", sleepLength, "seconds. Size of Links:", len(scraper.PendingLinks))
-		time.Sleep(time.Duration(sleepLength))
+		time.Sleep(time.Duration(sleepLength)* time.Second)
 		scraper.setCollector()
 		err = scraper.setLinksQueue()
 		if !utility.IsNil(err) {
