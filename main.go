@@ -5,6 +5,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/sporule/grater/modules/apis/apiv1"
 	"github.com/sporule/grater/modules/database"
@@ -38,17 +39,11 @@ func main() {
 	switch mode {
 	case "dist":
 		//dist mode only runs distributor
-		router := gin.Default()
-		apiv1.RegisterAPIRoutes(router)
-		router.Run(":" + utility.GetEnv("PORT", "9999"))
+		runAPI()
 	case "scraper":
 		for {
 			//scraper mode only runs scraper
-			err := scraper.StartScraping()
-			if err != nil {
-				log.Println("error occured, wait for 60 seconds before restart:", err)
-				time.Sleep(60 * time.Second)
-			}
+			scraping()
 		}
 	case "both":
 		//both mode runs both distributor and scraper
@@ -56,15 +51,30 @@ func main() {
 			time.Sleep(5 * time.Second)
 			for {
 				//turn on scraper mode
-				err := scraper.StartScraping()
-				if err != nil {
-					log.Println("error occured, wait for 60 seconds before restart", err)
-					time.Sleep(60 * time.Second)
-				}
+				scraping()
 			}
 		}()
-		router := gin.Default()
-		apiv1.RegisterAPIRoutes(router)
-		router.Run(":" + utility.GetEnv("PORT", "9999"))
+		runAPI()
 	}
+}
+
+func scraping() {
+	err := scraper.StartScraping()
+	if err != nil {
+		log.Println("error occured, wait for 60 seconds before restart:", err)
+		time.Sleep(60 * time.Second)
+	}
+}
+
+func runAPI() {
+	router := gin.Default()
+	router.Use(cors.New(cors.Config{
+		AllowOrigins:     []string{"https://www.dealself.com", "http://127.0.0.1:8080"},
+		AllowMethods:     []string{"GET"},
+		AllowHeaders:     []string{"Origin"},
+		ExposeHeaders:    []string{"Content-Length"},
+		AllowCredentials: true,
+	}))
+	apiv1.RegisterAPIRoutes(router)
+	router.Run(":" + utility.GetEnv("PORT", "9999"))
 }
