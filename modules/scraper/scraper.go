@@ -30,23 +30,25 @@ import (
 
 //scraper is the struct for scraper
 type scraper struct {
-	ID                      string `json:"id,omitempty"`
-	Collector               *colly.Collector
-	Proxies                 []string
-	Rule                    models.Rule
-	Queue                   *queue.Queue
-	ReceviedLinkIDs         []string
-	ScrapedRecords          []string
-	PageLayoutErrors        []string
-	ParentLinks             map[string]string
-	ParentLinksMutex        sync.RWMutex
-	Headers                 map[string]string
-	Cookie                  string
-	CookiesJar              []string
-	UseProxy                bool
-	ProfileChangedTimeStamp time.Time
-	PrfileChangedMutex      sync.RWMutex
-	PendingLinks            []string
+	ID                       string `json:"id,omitempty"`
+	Collector                *colly.Collector
+	Proxies                  []string
+	Rule                     models.Rule
+	Queue                    *queue.Queue
+	ReceviedLinkIDs          []string
+	ScrapedRecords           []string
+	PageLayoutErrors         []string
+	ParentLinks              map[string]string
+	ParentLinksMutex         sync.RWMutex
+	Headers                  map[string]string
+	Cookie                   string
+	CookiesJar               []string
+	UseProxy                 bool
+	ProfileChangedTimeStamp  time.Time
+	PrfileChangedMutex       sync.RWMutex
+	PendingLinks             []string
+	PreviousPendingLinksSize int
+	FailedTimes              int
 }
 
 func (scraper *scraper) UpdateParentLinks(link, value string) {
@@ -282,6 +284,17 @@ func (scraper *scraper) setLinksQueue() error {
 }
 
 func (scraper *scraper) AddLinkToQueue(url string) {
+	if scraper.FailedTimes > 30 {
+		//give up the url
+		return
+	}
+	if scraper.FailedTimes > 5 {
+		if time.Now().Second() >= rand.Intn(60-scraper.FailedTimes) {
+			//The higher the failed times, the higher the chance it will add back to the queue rather than using a cookie
+			scraper.Queue.AddURL(url)
+			return
+		}
+	}
 	scraper.PendingLinks = append(scraper.PendingLinks, url)
 }
 
@@ -647,7 +660,7 @@ func StartScraping() error {
 	go func() {
 		for {
 			scraper.setProxies()
-			time.Sleep(3 * time.Minute)
+			time.Sleep(6 * time.Minute)
 		}
 	}()
 	//save data to database very minute
@@ -662,6 +675,12 @@ func StartScraping() error {
 		return err
 	}
 	for len(scraper.PendingLinks) > 0 {
+		if len(scraper.PendingLinks) == scraper.PreviousPendingLinksSize {
+			scraper.FailedTimes++
+		} else {
+			scraper.FailedTimes = 0
+		}
+		scraper.PreviousPendingLinksSize = len(scraper.PendingLinks)
 		sleepLength := rand.Int31n(int32(math.Max(float64(len(scraper.PendingLinks)), 60)))
 		log.Println("Refreshing collector,queue,proxies and cookies,sleep for ", sleepLength, "seconds. Size of Links:", len(scraper.PendingLinks))
 		time.Sleep(time.Duration(sleepLength) * time.Second)
