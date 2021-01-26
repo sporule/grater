@@ -69,16 +69,26 @@ func new(id string) (*scraper, error) {
 }
 
 func (scraper *scraper) saveScrapedRecords() error {
+	//save records
+	if len(scraper.scrapedRecords) <= 0 {
+		return nil
+	}
 	err := models.InsertManyResults(scraper.rule.TargetLocation, scraper.scrapedRecords)
 	if err != nil {
 		return err
 	}
 	scraper.scrapedRecords = make([]string, 0)
+
+	//save page layouts
+	if len(scraper.pageLayoutErrors) <= 0 {
+		return nil
+	}
 	err = models.InsertManyResults("PageLayoutError", scraper.pageLayoutErrors)
 	if err != nil {
 		return err
 	}
 	scraper.pageLayoutErrors = make([]string, 0)
+
 	return nil
 }
 
@@ -114,8 +124,7 @@ func (scraper *scraper) changeProfile(isProxy, isCookies bool) {
 
 func (scraper *scraper) addCookiesToJar(cookies ...string) {
 	scraper.cookie += cookies[0]
-	log.Println("Latest Cookies:", scraper.cookie)
-
+	//log.Println("Latest Cookies:", scraper.cookie)
 }
 
 func (scraper *scraper) getCookie() string {
@@ -142,23 +151,26 @@ func (scraper *scraper) setProxies() error {
 }
 
 func getProxies(link, proxyType, testLink string) (fullProxies []string, cookies []string, err error) {
-	res, err := http.Get(link)
-	if res.Body != nil {
-		defer res.Body.Close()
-	}
-	body, err := ioutil.ReadAll(res.Body)
-	if err != nil {
-		log.Println("Unable to obtain Proxy")
-		return nil, nil, err
-	}
-	proxies := strings.Split(string(body), "\r\n")
-	if len(proxies) <= 1 {
-		proxies = strings.Split(string(body), "\n")
-	}
-	validatedProxies, cookies := proxyCheck(proxies, proxyType, testLink)
-	log.Println("Proxies:", len(proxies), "Validated:", len(validatedProxies))
-	for _, proxy := range validatedProxies {
-		fullProxies = append(fullProxies, proxyType+"://"+proxy)
+	for len(fullProxies) <= 1 {
+		res, err := http.Get(link)
+		if res.Body != nil {
+			defer res.Body.Close()
+		}
+		body, err := ioutil.ReadAll(res.Body)
+		if err != nil {
+			log.Println("Unable to obtain Proxy")
+			return nil, nil, err
+		}
+		proxies := strings.Split(string(body), "\r\n")
+		if len(proxies) <= 1 {
+			proxies = strings.Split(string(body), "\n")
+		}
+		validatedProxies, cookies := proxyCheck(proxies, proxyType, testLink)
+		log.Println("Proxies:", len(proxies), "Validated:", len(validatedProxies), "Cookies:", len(cookies))
+		for _, proxy := range validatedProxies {
+			fullProxies = append(fullProxies, proxyType+"://"+proxy)
+		}
+		time.Sleep(5 * time.Second)
 	}
 	return fullProxies, cookies, nil
 }
@@ -186,7 +198,7 @@ func (scraper *scraper) setLinksToComplete() error {
 func (scraper *scraper) setRule() error {
 	if api := utility.GetEnv("DISTRIBUTOR_API", "http://localhost:9999/api/v1/dist"); !utility.IsNil(api) {
 		//obtain the highest priority queue
-		res, err := http.Get(api + "/rules")
+		res, err := http.Get(api + "/rules?isscraper=1")
 		if err != nil {
 			log.Println("Unable to make request to obtain rules", err)
 			return err
@@ -317,21 +329,14 @@ func (scraper *scraper) setCollector() error {
 				r.Headers.Set(k, v)
 			}
 		}
-		// if time.Now().Second()%2 == 0 || time.Now().Second()%3 == 0 {
-		// 	//only set the server cookie in a percentage
-		// 	r.Headers.Set("cookie", scraper.getCookie())
-		// }
 		r.Headers.Set("cookie", scraper.getCookie())
 	})
 
 	c.OnHTML("body", func(e *colly.HTMLElement) {
 		requestLink := e.Request.URL.String()
-		// cookie := scraper.Collector.Cookies(e.Request.URL.String())
-		// scraper.SaveCookie(cookie)
 		linkPatterns := strings.Split(scraper.rule.DeepLinkPatterns, ",")
 		if len(linkPatterns) >= 3 {
 			// this is the parent page deeplink,link pattern needs at least 3 parameters
-			//TODO, parentPageDOM is empty
 			parentPageDom := e.DOM.Find(linkPatterns[0])
 			if parentPageDom.Size() > 0 {
 				parentPageDom.Each(func(index int, elem *goquery.Selection) {
@@ -396,7 +401,6 @@ func (scraper *scraper) setCollector() error {
 			}
 
 			scraper.addLinkToQueue(e.Request.URL.String())
-			//time.Sleep(time.Duration(rand.Int31n(30)) * time.Second)
 			return
 		}
 		if !invalidPage {
@@ -432,8 +436,6 @@ func (scraper *scraper) setCollector() error {
 			scraper.changeProfile(true, true)
 			scraper.addLinkToQueue(r.Request.URL.String())
 		}
-
-		// time.Sleep(time.Duration(rand.Int31n(30)) * time.Second)
 	})
 
 	for len(scraper.proxies) <= 0 && scraper.useProxy {
@@ -658,7 +660,7 @@ func runOneScraper(id string) error {
 	go func() {
 		for {
 			scraper.saveScrapedRecords()
-			time.Sleep(time.Minute)
+			time.Sleep(30 * time.Second)
 		}
 	}()
 	if err != nil {
@@ -699,7 +701,7 @@ func runOneScraper(id string) error {
 
 //StartScraping fires of the scraping process
 func StartScraping() (err error) {
-	scrapersStr := utility.GetEnv("SCRAPERS", "5")
+	scrapersStr := utility.GetEnv("SCRAPERS", "3")
 	scrapers, err := strconv.Atoi(scrapersStr)
 	if err != nil {
 		scrapers = 5

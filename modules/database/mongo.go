@@ -42,7 +42,7 @@ func (db *MongoDB) GetOne(table string, item interface{}, filtersMap map[string]
 }
 
 //GetAll returns all result
-func (db *MongoDB) GetAll(table string, items interface{}, filtersMap map[string]interface{}, page int) error {
+func (db *MongoDB) GetAll(table string, items interface{}, filtersMap map[string]interface{}, sortByMap map[string]interface{}, page int) error {
 	//set pagination
 	itemPerPageStr := utility.GetEnv("ITEM_PER_PAGE", "10")
 	itemPerPage, _ := strconv.Atoi(itemPerPageStr)
@@ -55,6 +55,9 @@ func (db *MongoDB) GetAll(table string, items interface{}, filtersMap map[string
 	options := &options.FindOptions{}
 	options.SetSkip(int64(skipSize))
 	options.SetLimit(int64(itemPerPage))
+	if sortByMap != nil {
+		options.SetSort(mgoqry.Bsons(sortByMap))
+	}
 
 	//convert filters map to filter bson.M
 	filters := mgoqry.Bsons(filtersMap)

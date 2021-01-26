@@ -35,8 +35,8 @@ func InsertManyResults(tableName string, results []string) error {
 }
 
 //GetResults returns results by fitlers
-func GetResults(tableName string, filtersMap map[string]interface{}, page int) ([]Result, error) {
+func GetResults(tableName string, filtersMap map[string]interface{}, sortByMap map[string]interface{}, page int) ([]Result, error) {
 	var results []Result
-	err := database.Client.GetAll(ruleTable, &results, filtersMap, page)
+	err := database.Client.GetAll(tableName, &results, filtersMap, sortByMap, page)
 	return results, err
 }

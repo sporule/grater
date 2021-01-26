@@ -4,7 +4,7 @@ package database
 type Database interface {
 	Connect(uri, databaseName string) error
 	GetOne(table string, item interface{}, filtersMap map[string]interface{}) error
-	GetAll(table string, items interface{}, filter map[string]interface{}, page int) error
+	GetAll(table string, items interface{}, filtersMap map[string]interface{}, sortByMap map[string]interface{}, page int) error
 	InsertOne(table string, item interface{}) error
 	InsertMany(table string, items []interface{}) error
 	UpdateOne(table string, filtersMap map[string]interface{}, updatedItem interface{}) error

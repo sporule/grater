@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/sporule/grater/models"
@@ -19,15 +20,28 @@ func InitiateDistRouters(router *gin.RouterGroup) {
 }
 
 func getRulesController(c *gin.Context) {
+	cCp := c.Copy()
 	res := make(chan utility.Result)
 	go func() {
 		//Currently only support getting all rules without pagination
-		links, err := models.GetRules(nil, 0)
+		isScraper := cCp.DefaultQuery("isscraper", "0")
+		var rules []models.Rule
+		var err error
+		if isScraper == "0" {
+			pageStr := cCp.DefaultQuery("page", "1")
+			page, err := strconv.Atoi(pageStr)
+			if err != nil {
+				page = 1
+			}
+			rules, err = models.GetRules(nil, page)
+		} else {
+			rules, err = models.GetRulesWithActiveLinks()
+		}
 		if err != nil {
 			res <- utility.Result{Code: http.StatusOK, Obj: &utility.Error{Error: utility.Enums().ErrorMessages.SystemError}}
 			return
 		}
-		res <- utility.Result{Code: http.StatusOK, Obj: links}
+		res <- utility.Result{Code: http.StatusOK, Obj: rules}
 		return
 	}()
 	result := <-res

@@ -2,7 +2,6 @@ package apiv1
 
 import (
 	"log"
-	"net/http"
 	"time"
 
 	"github.com/gin-contrib/gzip"
@@ -10,15 +9,11 @@ import (
 	"github.com/go-co-op/gocron"
 	"github.com/sporule/grater/models"
 	"github.com/sporule/grater/modules/apis/apiv1/controllers"
-	"github.com/sporule/grater/modules/utility"
 )
 
 //RegisterAPIRoutes registers all api routers
 func RegisterAPIRoutes(router *gin.Engine) {
 	r := router.Group("/api/v1")
-	router.NoRoute(func(c *gin.Context) {
-		c.HTML(404, "404.html", gin.H{})
-	})
 	r.Use(gzip.Gzip(gzip.DefaultCompression))
 	registerEndpoints(r)
 	runTimerJobs()
@@ -27,12 +22,12 @@ func RegisterAPIRoutes(router *gin.Engine) {
 //registerEndpoints register the core end points
 func registerEndpoints(router *gin.RouterGroup) {
 	controllers.InitiateDistRouters(router)
+	controllers.InitiateAdminRouters(router)
 	router.GET("/heartbeat", heartbeatController)
 }
 
 func heartbeatController(c *gin.Context) {
-	result := utility.Result{Code: http.StatusOK, Obj: "hello world"}
-	c.JSON(result.Expand())
+	c.HTML(200, "hello world", gin.H{})
 }
 
 //runTimerJobs runs timerjobs to refresh the links
@@ -50,7 +45,7 @@ func runTimerJobs() {
 		}
 	}
 	//reset dead running links
-	scheduler.Every(30).Minutes().StartAt(time.Now().Add(time.Duration(31 * time.Minute))).Do(models.ResetInactiveLinks)
+	scheduler.Every(60).Minutes().StartAt(time.Now().Add(time.Duration(60 * time.Minute))).Do(models.ResetInactiveLinks)
 	scheduler.StartAsync()
 	log.Println("Timer Jobs registered.")
 }

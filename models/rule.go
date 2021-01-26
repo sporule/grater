@@ -2,6 +2,7 @@ package models
 
 import (
 	"errors"
+	"math/rand"
 	"strconv"
 	"strings"
 	"time"
@@ -99,7 +100,21 @@ func GetRule(id string) (*Rule, error) {
 //GetRules returns rule by fitlers
 func GetRules(filtersMap map[string]interface{}, page int) ([]Rule, error) {
 	var rules []Rule
-	err := database.Client.GetAll(ruleTable, &rules, filtersMap, page)
+	err := database.Client.GetAll(ruleTable, &rules, filtersMap, nil, page)
+	return rules, err
+}
+
+//GetRulesWithActiveLinks returns rules with active link, it returns a slice but with only 1 item
+func GetRulesWithActiveLinks() ([]Rule, error) {
+	var rules []Rule
+	links, err := GetLinks("", "Active", 1)
+	if err != nil {
+		return nil, err
+	}
+	index := rand.Intn(len(links))
+	//return a random rule with active links
+	rule, err := GetRule(links[index].RuleID)
+	rules = append(rules, *rule) // return a list because of lazy
 	return rules, err
 }
 

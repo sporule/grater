@@ -40,7 +40,10 @@ func NewLink(link, ruleID string) (*Link, error) {
 func GetLinks(ruleID, status string, page int) ([]Link, error) {
 	var links []Link
 	filters := map[string]interface{}{"status": status, "ruleid": ruleID}
-	return links, database.Client.GetAll(linkTable, &links, filters, page)
+	if ruleID == "" {
+		filters = map[string]interface{}{"status": status}
+	}
+	return links, database.Client.GetAll(linkTable, &links, filters, nil, page)
 }
 
 //AddLinks inserts a list of links to the database
@@ -100,7 +103,7 @@ func AllocateLinks(ruleID, scraper string) ([]Link, error) {
 
 //ResetInactiveLinks sets tasks that are running for more than 1 hour back to Active with empty scraper
 func ResetInactiveLinks() error {
-	//default time is 30 minutes
+	//default time is 60 minutes
 	timeLimit := time.Now().Add(-time.Minute * 60)
 	filters := map[string]interface{}{"lastupdate": database.Client.LessThanQry(timeLimit), "status": utility.Enums().Status.Running}
 	updatesFields := map[string]interface{}{"status": utility.Enums().Status.Active, "scraper": ""}
