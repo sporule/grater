@@ -423,10 +423,12 @@ func (scraper *scraper) setCollector() error {
 		//log.Println("Failed HTTP", r.StatusCode, err, r.Request.URL)
 		if r.StatusCode <= 10 {
 			scraper.ChangeProfile(true, false)
+			scraper.Queue.AddURL(r.Request.URL.String())
 		} else {
 			scraper.ChangeProfile(true, true)
+			scraper.AddLinkToQueue(r.Request.URL.String())
 		}
-		scraper.AddLinkToQueue(r.Request.URL.String())
+
 		// time.Sleep(time.Duration(rand.Int31n(30)) * time.Second)
 	})
 
@@ -658,7 +660,7 @@ func StartScraping() error {
 		return err
 	}
 	for len(scraper.PendingLinks) > 0 {
-		sleepLength := rand.Int31n(120)
+		sleepLength := rand.Int31n(int32(math.Max(float64(len(scraper.PendingLinks)), 20)))
 		log.Println("Refreshing collector,queue,proxies and cookies,sleep for ", sleepLength, "seconds. Size of Links:", len(scraper.PendingLinks))
 		time.Sleep(time.Duration(sleepLength))
 		scraper.setCollector()
