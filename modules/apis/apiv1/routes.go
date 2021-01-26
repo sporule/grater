@@ -10,6 +10,7 @@ import (
 	"github.com/go-co-op/gocron"
 	"github.com/sporule/grater/models"
 	"github.com/sporule/grater/modules/apis/apiv1/controllers"
+	"github.com/sporule/grater/modules/timerjob"
 )
 
 //RegisterAPIRoutes registers all api routers
@@ -42,7 +43,7 @@ func runTimerJobs() {
 		//setting timer jobs
 		if rule.Frequency > 0 {
 			//generate rules
-			scheduler.Every(uint64(rule.Frequency)).Seconds().Do(rule.GenerateAndInsertLinks)
+			scheduler.Every(uint64(rule.Frequency)).Seconds().Do(timerjob.GenerateLinks, rule)
 		}
 	}
 	//reset dead running links
