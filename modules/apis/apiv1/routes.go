@@ -31,12 +31,7 @@ func registerEndpoints(router *gin.RouterGroup) {
 }
 
 func heartbeatController(c *gin.Context) {
-	res := make(chan utility.Result)
-	go func() {
-		res <- utility.Result{Code: http.StatusOK, Obj: c.ClientIP()}
-		return
-	}()
-	result := <-res
+	result := utility.Result{Code: http.StatusOK, Obj: "hello world"}
 	c.JSON(result.Expand())
 }
 

@@ -30,106 +30,96 @@ import (
 
 //scraper is the struct for scraper
 type scraper struct {
-	ID                       string `json:"id,omitempty"`
-	Collector                *colly.Collector
-	Proxies                  []string
-	Rule                     models.Rule
-	Queue                    *queue.Queue
-	ReceviedLinkIDs          []string
-	ScrapedRecords           []string
-	PageLayoutErrors         []string
-	ParentLinks              map[string]string
-	ParentLinksMutex         sync.RWMutex
-	Headers                  map[string]string
-	Cookie                   string
-	CookiesJar               []string
-	UseProxy                 bool
-	ProfileChangedTimeStamp  time.Time
-	PrfileChangedMutex       sync.RWMutex
-	PendingLinks             []string
-	PreviousPendingLinksSize int
-	FailedTimes              int
+	id                       string
+	collector                *colly.Collector
+	proxies                  []string
+	rule                     models.Rule
+	queue                    *queue.Queue
+	receviedLinkIDs          []string
+	scrapedRecords           []string
+	pageLayoutErrors         []string
+	parentLinks              map[string]string
+	parentLinksMutex         sync.RWMutex
+	headers                  map[string]string
+	cookie                   string
+	cookiesJar               []string
+	useProxy                 bool
+	profileChangedTimeStamp  time.Time
+	profileChangedMutex      sync.RWMutex
+	failedRequests           int
+	pendingLinks             []string
+	previousPendingLinksSize int
+	failedTimes              int
 }
 
-func (scraper *scraper) UpdateParentLinks(link, value string) {
-	scraper.ParentLinksMutex.Lock()
-	scraper.ParentLinks[link] = value
-	scraper.ParentLinksMutex.Unlock()
+func (scraper *scraper) updateParentLinks(link, value string) {
+	scraper.parentLinksMutex.Lock()
+	scraper.parentLinks[link] = value
+	scraper.parentLinksMutex.Unlock()
 }
 
 //new creates new scraper
-func new() (*scraper, error) {
-	id, _ := uuid.NewRandom()
+func new(id string) (*scraper, error) {
+
 	return &scraper{
-		ID:          id.String(),
-		ParentLinks: make(map[string]string),
-		UseProxy:    true,
+		id:          id,
+		parentLinks: make(map[string]string),
+		useProxy:    true,
 	}, nil
 }
 
-func (scraper *scraper) SaveScrapedRecords() error {
-	err := models.InsertManyResults(scraper.Rule.TargetLocation, scraper.ScrapedRecords)
+func (scraper *scraper) saveScrapedRecords() error {
+	err := models.InsertManyResults(scraper.rule.TargetLocation, scraper.scrapedRecords)
 	if err != nil {
 		return err
 	}
-	scraper.ScrapedRecords = make([]string, 0)
-	err = models.InsertManyResults("PageLayoutError", scraper.PageLayoutErrors)
+	scraper.scrapedRecords = make([]string, 0)
+	err = models.InsertManyResults("PageLayoutError", scraper.pageLayoutErrors)
 	if err != nil {
 		return err
 	}
-	scraper.PageLayoutErrors = make([]string, 0)
+	scraper.pageLayoutErrors = make([]string, 0)
 	return nil
 }
 
-func (scraper *scraper) ChangeProfile(isProxy, isCookies bool) {
-	scraper.PrfileChangedMutex.Lock()
+func (scraper *scraper) changeProfile(isProxy, isCookies bool) {
+	scraper.profileChangedMutex.Lock()
+	scraper.failedRequests++
 	if isProxy {
-		for len(scraper.Proxies) <= 1 {
+		for len(scraper.proxies) <= 1 {
 			log.Println("Waiting for proxy")
 			time.Sleep(20 * time.Second)
 		}
 	}
-	if scraper.ProfileChangedTimeStamp.Add(10 * time.Second).Before(time.Now()) {
+	if scraper.profileChangedTimeStamp.Add(10 * time.Second).Before(time.Now()) {
 		if isCookies {
-			if len(scraper.CookiesJar) > 1 {
-				scraper.Cookie = scraper.CookiesJar[0]
+			if len(scraper.cookiesJar) > 1 {
+				scraper.cookie = scraper.cookiesJar[0]
 				//reset cookies
-				scraper.CookiesJar = scraper.CookiesJar[1:]
+				scraper.cookiesJar = scraper.cookiesJar[1:]
 			}
-			scraper.ProfileChangedTimeStamp = time.Now()
+			scraper.profileChangedTimeStamp = time.Now()
 		}
 		if isProxy {
 			//reset proxies
-			scraper.Proxies = scraper.Proxies[1:]
-			scraper.ProfileChangedTimeStamp = time.Now()
+			scraper.proxies = scraper.proxies[1:]
+			scraper.profileChangedTimeStamp = time.Now()
 		}
 
-		log.Println("Profile Changed, proxies:", len(scraper.Proxies), "cookies:", len(scraper.CookiesJar))
+		log.Println("Profile Changed, proxies:", len(scraper.proxies), "cookies:", len(scraper.cookiesJar), "failed requests:", scraper.failedRequests)
+		scraper.failedRequests = 0
 	}
-	scraper.PrfileChangedMutex.Unlock()
+	scraper.profileChangedMutex.Unlock()
 }
 
 func (scraper *scraper) addCookiesToJar(cookies ...string) {
-	// if len(scraper.CookiesJar) > 30 {
-	// 	// maintain 30 cookies to ensure it is up to date
-	// 	if len(scraper.CookiesJar) <= len(cookies) {
-	// 		scraper.CookiesJar = cookies
-	// 	} else {
-	// 		scraper.CookiesJar = scraper.CookiesJar[len(cookies):]
-	// 	}
-	// }
-	// scraper.CookiesJar = append(scraper.CookiesJar, cookies...)
-	scraper.Cookie += cookies[0]
-	log.Println("Latest Cookies:", scraper.Cookie)
+	scraper.cookie += cookies[0]
+	log.Println("Latest Cookies:", scraper.cookie)
 
 }
 
 func (scraper *scraper) getCookie() string {
-	// if len(scraper.CookiesJar) > 0 {
-	// 	return scraper.CookiesJar[0]
-	// }
-	// return ""
-	return scraper.Cookie
+	return scraper.cookie
 }
 
 func (scraper *scraper) setProxies() error {
@@ -137,7 +127,7 @@ func (scraper *scraper) setProxies() error {
 	proxyAPIStr := utility.GetEnv("PROXY_API", "socks5%https://api.proxyscrape.com/v2/?request=getproxies&protocol=socks5&timeout=10000&country=all")
 	proxyProtocol := strings.Split(proxyAPIStr, "%")[0]
 	proxyLink := strings.Split(proxyAPIStr, "%")[1]
-	testLink := strings.Join(strings.Split(scraper.Rule.LinkPattern, "/")[:3], "/")
+	testLink := strings.Join(strings.Split(scraper.rule.LinkPattern, "/")[:3], "/")
 	if utility.IsNil(proxyProtocol, proxyLink, testLink) {
 		return errors.New("Can't read proxy configuration, disabling proxy")
 	}
@@ -145,8 +135,8 @@ func (scraper *scraper) setProxies() error {
 	if err != nil {
 		return err
 	}
-	scraper.Proxies = proxies
-	scraper.CookiesJar = cookies
+	scraper.proxies = proxies
+	scraper.cookiesJar = cookies
 	log.Println("Proxy obtained, size:", len(proxies), "cookies, size:", len(cookies))
 	return nil
 }
@@ -176,7 +166,7 @@ func getProxies(link, proxyType, testLink string) (fullProxies []string, cookies
 func (scraper *scraper) setLinksToComplete() error {
 	if api := utility.GetEnv("DISTRIBUTOR_API", "http://localhost:9999/api/v1/dist"); !utility.IsNil(api) {
 		body, err := json.Marshal(map[string][]string{
-			"linkids": scraper.ReceviedLinkIDs,
+			"linkids": scraper.receviedLinkIDs,
 		})
 		if err != nil {
 			return errors.New("Error on parsing completed link IDs")
@@ -184,7 +174,7 @@ func (scraper *scraper) setLinksToComplete() error {
 		_, err = http.Post(api+"/links", "application/json", bytes.NewBuffer(body))
 		if err == nil {
 			//reset the completedLinkIDs
-			scraper.ReceviedLinkIDs = make([]string, 0)
+			scraper.receviedLinkIDs = make([]string, 0)
 			return nil
 		}
 	} else {
@@ -224,7 +214,7 @@ func (scraper *scraper) setRule() error {
 			log.Println("Unable to read rule information")
 			return errors.New("Unable to read rule information")
 		}
-		scraper.Rule = rule
+		scraper.rule = rule
 	} else {
 		return errors.New("API Not found")
 	}
@@ -264,39 +254,39 @@ func getLinks(ruleID string, scraperID string) (linkIDs, pendingLinks []string, 
 }
 
 func (scraper *scraper) setLinksQueue() error {
-	if len(scraper.PendingLinks) > 0 {
+	if len(scraper.pendingLinks) > 0 {
 		threadSizeStr := utility.GetEnv("THREADS", "20")
 		threadSize, err := strconv.Atoi(threadSizeStr)
 		if err != nil {
 			threadSize = 20
 		}
-		scraper.Queue, _ = queue.New(
+		scraper.queue, _ = queue.New(
 			threadSize,
 			&queue.InMemoryQueueStorage{MaxSize: 100000}, // Use default queue storage
 		)
-		for _, link := range scraper.PendingLinks {
-			scraper.Queue.AddURL(link)
+		for _, link := range scraper.pendingLinks {
+			scraper.queue.AddURL(link)
 		}
-		scraper.PendingLinks = make([]string, 0)
+		scraper.pendingLinks = make([]string, 0)
 
 	}
 	return nil
 }
 
-func (scraper *scraper) AddLinkToQueue(url string) {
-	if scraper.FailedTimes > 30 {
+func (scraper *scraper) addLinkToQueue(url string) {
+	if scraper.failedTimes > 10 {
 		//give up the url
 		log.Println("Giving up the link:", url)
 		return
 	}
-	if scraper.FailedTimes > 5 {
-		if time.Now().Second() >= rand.Intn(60-scraper.FailedTimes) {
+	if scraper.failedTimes > 5 {
+		if time.Now().Second() >= rand.Intn(30-scraper.failedTimes*2) {
 			//The higher the failed times, the higher the chance it will add back to the queue rather than using a cookie
-			scraper.Queue.AddURL(url)
+			scraper.queue.AddURL(url)
 			return
 		}
 	}
-	scraper.PendingLinks = append(scraper.PendingLinks, url)
+	scraper.pendingLinks = append(scraper.pendingLinks, url)
 }
 
 func (scraper *scraper) setCollector() error {
@@ -313,17 +303,17 @@ func (scraper *scraper) setCollector() error {
 
 	//set headers
 	var headers map[string]string
-	err := json.Unmarshal([]byte(scraper.Rule.Headers), &headers)
+	err := json.Unmarshal([]byte(scraper.rule.Headers), &headers)
 	if err == nil {
-		scraper.Headers = headers
+		scraper.headers = headers
 	} else {
-		scraper.Headers = nil
+		scraper.headers = nil
 	}
 
 	c.OnRequest(func(r *colly.Request) {
 		time.Sleep(time.Duration(rand.Int31n(5)) * time.Second)
-		if scraper.Headers != nil {
-			for k, v := range scraper.Headers {
+		if scraper.headers != nil {
+			for k, v := range scraper.headers {
 				r.Headers.Set(k, v)
 			}
 		}
@@ -338,7 +328,7 @@ func (scraper *scraper) setCollector() error {
 		requestLink := e.Request.URL.String()
 		// cookie := scraper.Collector.Cookies(e.Request.URL.String())
 		// scraper.SaveCookie(cookie)
-		linkPatterns := strings.Split(scraper.Rule.DeepLinkPatterns, ",")
+		linkPatterns := strings.Split(scraper.rule.DeepLinkPatterns, ",")
 		if len(linkPatterns) >= 3 {
 			// this is the parent page deeplink,link pattern needs at least 3 parameters
 			//TODO, parentPageDOM is empty
@@ -364,8 +354,8 @@ func (scraper *scraper) setCollector() error {
 									link = e.Request.URL.Scheme + "://" + e.Request.URL.Host + "/" + link
 								}
 							}
-							scraper.UpdateParentLinks(link, parentValue)
-							scraper.AddLinkToQueue(link)
+							scraper.updateParentLinks(link, parentValue)
+							scraper.addLinkToQueue(link)
 						} else {
 							log.Println("Not visting the link:", link, "because it contains:", linkPatterns[4])
 						}
@@ -377,35 +367,35 @@ func (scraper *scraper) setCollector() error {
 								link = e.Request.URL.Scheme + "://" + e.Request.URL.Host + "/" + link
 							}
 						}
-						scraper.UpdateParentLinks(link, parentValue)
-						scraper.AddLinkToQueue(link)
+						scraper.updateParentLinks(link, parentValue)
+						scraper.addLinkToQueue(link)
 					}
 				})
 				return
 			}
 		}
 		var pattern map[string]interface{}
-		err := json.Unmarshal([]byte(scraper.Rule.Pattern), &pattern)
+		err := json.Unmarshal([]byte(scraper.rule.Pattern), &pattern)
 		if !utility.IsNil(err) {
 			log.Println("Cannot read the rule pattern", err)
 			return
 		}
-		value, isWrongPage, invalidPage := parsePattern(e.DOM, pattern, scraper.ParentLinks[requestLink], true)
+		value, isWrongPage, invalidPage := parsePattern(e.DOM, pattern, scraper.parentLinks[requestLink], true)
 		if isWrongPage {
 			if len(utility.GetEnv("WRITEPAGELAYOUTERROR", "")) > 0 {
 				html, _ := e.DOM.Html()
 				cookie := e.Request.Headers.Get("cookie")
-				scraper.PageLayoutErrors = append(scraper.PageLayoutErrors, requestLink+"*****"+cookie+"*****"+html)
+				scraper.pageLayoutErrors = append(scraper.pageLayoutErrors, requestLink+"*****"+cookie+"*****"+html)
 			}
 			//log.Println("Page layout not as expected,change cookie", requestLink)
 			//change cookie and proxy
 			if time.Now().Second()%5 == 0 {
-				scraper.ChangeProfile(false, true)
+				scraper.changeProfile(false, true)
 			} else {
-				scraper.ChangeProfile(true, true)
+				scraper.changeProfile(true, true)
 			}
 
-			scraper.AddLinkToQueue(e.Request.URL.String())
+			scraper.addLinkToQueue(e.Request.URL.String())
 			//time.Sleep(time.Duration(rand.Int31n(30)) * time.Second)
 			return
 		}
@@ -416,7 +406,7 @@ func (scraper *scraper) setCollector() error {
 				log.Println("Validated data is not valid json")
 				return
 			}
-			scraper.ScrapedRecords = append(scraper.ScrapedRecords, string(jsonString))
+			scraper.scrapedRecords = append(scraper.scrapedRecords, string(jsonString))
 			log.Println("Scraped Success:", value)
 		} else {
 			log.Println("Data recevied failed on validation", requestLink)
@@ -436,32 +426,32 @@ func (scraper *scraper) setCollector() error {
 	c.OnError(func(r *colly.Response, err error) {
 		//log.Println("Failed HTTP", r.StatusCode, err, r.Request.URL)
 		if r.StatusCode <= 10 {
-			scraper.ChangeProfile(true, false)
-			scraper.Queue.AddURL(r.Request.URL.String())
+			scraper.changeProfile(true, false)
+			scraper.queue.AddURL(r.Request.URL.String())
 		} else {
-			scraper.ChangeProfile(true, true)
-			scraper.AddLinkToQueue(r.Request.URL.String())
+			scraper.changeProfile(true, true)
+			scraper.addLinkToQueue(r.Request.URL.String())
 		}
 
 		// time.Sleep(time.Duration(rand.Int31n(30)) * time.Second)
 	})
 
-	for len(scraper.Proxies) <= 0 && scraper.UseProxy {
+	for len(scraper.proxies) <= 0 && scraper.useProxy {
 		log.Println("Waiting for the Proxy...")
 		time.Sleep(20 * time.Second)
 	}
-	c.SetProxyFunc(scraper.ProxySwitcher)
+	c.SetProxyFunc(scraper.proxySwitcher)
 
 	//create scraper collector
-	scraper.Collector = c
+	scraper.collector = c
 	return nil
 }
 
-func (scraper *scraper) ProxySwitcher(pr *http.Request) (*url.URL, error) {
-	for len(scraper.Proxies) <= 0 {
+func (scraper *scraper) proxySwitcher(pr *http.Request) (*url.URL, error) {
+	for len(scraper.proxies) <= 0 {
 		time.Sleep(1 * time.Second)
 	}
-	proxyStr := scraper.Proxies[0] //always return the first proxy
+	proxyStr := scraper.proxies[0] //always return the first proxy
 	proxy := &url.URL{Scheme: strings.Split(proxyStr, "://")[0], Host: strings.Split(proxyStr, "://")[1]}
 	return proxy, nil
 }
@@ -644,19 +634,19 @@ func getCookieFromRespList(respCookies []string) string {
 	return cookie
 }
 
-//StartScraping fires of the scraping process
-func StartScraping() error {
+//runOneScraper fires of the scraping process
+func runOneScraper(id string) error {
 	log.Println("Scraper started")
-	scraper, _ := new()
+	scraper, _ := new(id)
 	//Get Rule
 	err := scraper.setRule()
 	//Get Links from Rule
-	linkIDs, pendingLinks, err := getLinks(scraper.Rule.ID, scraper.ID)
+	linkIDs, pendingLinks, err := getLinks(scraper.rule.ID, scraper.id)
 	if !utility.IsNil(err) {
 		return err
 	}
-	scraper.ReceviedLinkIDs = linkIDs
-	scraper.PendingLinks = pendingLinks
+	scraper.receviedLinkIDs = linkIDs
+	scraper.pendingLinks = pendingLinks
 	//get new proxies periodically
 	go func() {
 		for {
@@ -667,7 +657,7 @@ func StartScraping() error {
 	//save data to database very minute
 	go func() {
 		for {
-			scraper.SaveScrapedRecords()
+			scraper.saveScrapedRecords()
 			time.Sleep(time.Minute)
 		}
 	}()
@@ -675,30 +665,61 @@ func StartScraping() error {
 		log.Println(err)
 		return err
 	}
-	for len(scraper.PendingLinks) > 0 {
-		if len(scraper.PendingLinks) == scraper.PreviousPendingLinksSize {
-			scraper.FailedTimes++
+	for len(scraper.pendingLinks) > 0 {
+		if len(scraper.pendingLinks) == scraper.previousPendingLinksSize {
+			scraper.failedTimes++
 		} else {
-			scraper.FailedTimes = 0
+			scraper.failedTimes = 0
 		}
-		scraper.PreviousPendingLinksSize = len(scraper.PendingLinks)
-		sleepLength := rand.Int31n(int32(math.Max(float64(len(scraper.PendingLinks)), 60)))
-		log.Println("Refreshing collector,queue,proxies and cookies,sleep for ", sleepLength, "seconds. Size of Links:", len(scraper.PendingLinks), "Total Failed Time:", scraper.FailedTimes)
-		time.Sleep(time.Duration(sleepLength) * time.Second)
+		scraper.previousPendingLinksSize = len(scraper.pendingLinks)
+		coolDownDelay := rand.Int31n(int32(math.Max(float64(len(scraper.pendingLinks)), 60)))
+		if utility.GetEnv("ISCOOLDOWN", "") == "" {
+			//disable cooldown function
+			coolDownDelay = 0
+		}
+		log.Println("Refreshing collector,queue,proxies and cookies,sleep for ", coolDownDelay, "seconds. Size of Links:", len(scraper.pendingLinks), "Total Failed Time:", scraper.failedTimes)
+		time.Sleep(time.Duration(coolDownDelay) * time.Second)
 		scraper.setCollector()
 		err = scraper.setLinksQueue()
 		if !utility.IsNil(err) {
 			return err
 		}
 
-		for scraper.Collector == nil {
+		for scraper.collector == nil {
 			log.Println("Waiting for collector to be ready")
 			time.Sleep(10 * time.Second)
 		}
-		scraper.Queue.Run(scraper.Collector)
+		scraper.queue.Run(scraper.collector)
 	}
 	scraper.setLinksToComplete()
-	scraper.SaveScrapedRecords()
+	scraper.saveScrapedRecords()
 	log.Println("Scraper Completed")
 	return nil
+}
+
+//StartScraping fires of the scraping process
+func StartScraping() (err error) {
+	scrapersStr := utility.GetEnv("SCRAPERS", "5")
+	scrapers, err := strconv.Atoi(scrapersStr)
+	if err != nil {
+		scrapers = 5
+	}
+	id, _ := uuid.NewRandom()
+	name := utility.GetEnv("NAME", id.String())
+	errs := make(chan error)
+	for i := 1; i <= scrapers; i++ {
+		go func() {
+			errs <- runOneScraper(name)
+		}()
+		//random delay before running the next scraper
+		time.Sleep(time.Duration(rand.Intn(60)) * time.Second)
+	}
+
+	for i := 1; i < scrapers; i++ {
+		tempErr := <-errs
+		if tempErr == nil {
+			err = nil
+		}
+	}
+	return err
 }
