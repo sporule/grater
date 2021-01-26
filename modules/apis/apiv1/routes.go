@@ -2,6 +2,7 @@ package apiv1
 
 import (
 	"log"
+	"net/http"
 	"time"
 
 	"github.com/gin-contrib/gzip"
@@ -27,7 +28,7 @@ func registerEndpoints(router *gin.RouterGroup) {
 }
 
 func heartbeatController(c *gin.Context) {
-	c.HTML(200, "hello world", gin.H{})
+	c.JSON(http.StatusOK, gin.H{"data": "hello world"})
 }
 
 //runTimerJobs runs timerjobs to refresh the links
