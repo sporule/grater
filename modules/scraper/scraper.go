@@ -170,9 +170,13 @@ func getProxies(link, proxyType, testLink string) (fullProxies []string, cookies
 		for _, proxy := range validatedProxies {
 			fullProxies = append(fullProxies, proxyType+"://"+proxy)
 		}
+		if len(fullProxies) > 1 {
+			return fullProxies, cookies, nil
+		}
 		time.Sleep(5 * time.Second)
 	}
-	return fullProxies, cookies, nil
+	//this code will never exectue
+	return nil, nil, nil
 }
 
 func (scraper *scraper) setLinksToComplete() error {
