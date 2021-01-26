@@ -2,6 +2,7 @@ package models
 
 import (
 	"errors"
+	"log"
 	"math/rand"
 	"strconv"
 	"strings"
@@ -80,6 +81,7 @@ func (rule *Rule) GenerateLinks() ([]string, error) {
 
 //GenerateAndInsertLinks generates links and Add it to the database, it also resets the incompleted links
 func (rule *Rule) GenerateAndInsertLinks() error {
+	log.Println("Generating links for rule:", rule.Name)
 	CancelInactiveLinks(rule.ID)
 	links, err := rule.GenerateLinks()
 	if err != nil {
