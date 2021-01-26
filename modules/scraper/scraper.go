@@ -38,7 +38,6 @@ type scraper struct {
 	ReceviedLinkIDs         []string
 	ScrapedRecords          []string
 	PageLayoutErrors        []string
-	TableName               string
 	ParentLinks             map[string]string
 	ParentLinksMutex        sync.RWMutex
 	Headers                 map[string]string
@@ -67,7 +66,7 @@ func new() (*scraper, error) {
 }
 
 func (scraper *scraper) SaveScrapedRecords() error {
-	err := models.InsertManyResults(scraper.TableName, scraper.ScrapedRecords)
+	err := models.InsertManyResults(scraper.Rule.TargetLocation, scraper.ScrapedRecords)
 	if err != nil {
 		return err
 	}
@@ -224,20 +223,19 @@ func (scraper *scraper) setRule() error {
 			return errors.New("Unable to read rule information")
 		}
 		scraper.Rule = rule
-		scraper.TableName = rule.TargetLocation
 	} else {
 		return errors.New("API Not found")
 	}
 	return nil
 }
 
-func (scraper *scraper) GetLinks() error {
+func getLinks(ruleID string, scraperID string) (linkIDs, pendingLinks []string, err error) {
 	if api := utility.GetEnv("DISTRIBUTOR_API", "http://localhost:9999/api/v1/dist"); !utility.IsNil(api) {
 		//obtain the links
-		res, err := http.Get(api + "/links?ruleid=" + scraper.Rule.ID + "&scraper=" + scraper.ID)
+		res, err := http.Get(api + "/links?ruleid=" + ruleID + "&scraper=" + scraperID)
 		if err != nil {
 			log.Println("Unable to make request to obtain links ", err)
-			return err
+			return nil, nil, err
 		}
 		if res.Body != nil {
 			defer res.Body.Close()
@@ -245,22 +243,22 @@ func (scraper *scraper) GetLinks() error {
 		body, err := ioutil.ReadAll(res.Body)
 		if err != nil {
 			log.Println("Unable to read links ", err)
-			return err
+			return nil, nil, err
 		}
 		var links []models.Link
 		err = json.Unmarshal(body, &links)
 		if err != nil {
 			log.Println("Could not find links")
-			return err
+			return nil, nil, err
 		}
 		for _, link := range links {
-			scraper.ReceviedLinkIDs = append(scraper.ReceviedLinkIDs, link.ID)
-			scraper.PendingLinks = append(scraper.PendingLinks, link.Link)
+			linkIDs = append(linkIDs, link.ID)
+			pendingLinks = append(pendingLinks, link.Link)
 		}
 	} else {
-		return errors.New("API Not found")
+		return nil, nil, errors.New("API Not found")
 	}
-	return nil
+	return linkIDs, pendingLinks, nil
 }
 
 func (scraper *scraper) setLinksQueue() error {
@@ -277,7 +275,7 @@ func (scraper *scraper) setLinksQueue() error {
 		for _, link := range scraper.PendingLinks {
 			scraper.Queue.AddURL(link)
 		}
-                scraper.PendingLinks = make([]string,0)
+		scraper.PendingLinks = make([]string, 0)
 
 	}
 	return nil
@@ -639,10 +637,12 @@ func StartScraping() error {
 	//Get Rule
 	err := scraper.setRule()
 	//Get Links from Rule
-	scraper.GetLinks()
+	linkIDs, pendingLinks, err := getLinks(scraper.Rule.ID, scraper.ID)
 	if !utility.IsNil(err) {
 		return err
 	}
+	scraper.ReceviedLinkIDs = linkIDs
+	scraper.PendingLinks = pendingLinks
 	//get new proxies periodically
 	go func() {
 		for {
@@ -664,7 +664,7 @@ func StartScraping() error {
 	for len(scraper.PendingLinks) > 0 {
 		sleepLength := rand.Int31n(int32(math.Max(float64(len(scraper.PendingLinks)), 20)))
 		log.Println("Refreshing collector,queue,proxies and cookies,sleep for ", sleepLength, "seconds. Size of Links:", len(scraper.PendingLinks))
-		time.Sleep(time.Duration(sleepLength)* time.Second)
+		time.Sleep(time.Duration(sleepLength) * time.Second)
 		scraper.setCollector()
 		err = scraper.setLinksQueue()
 		if !utility.IsNil(err) {
