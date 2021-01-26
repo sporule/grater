@@ -409,6 +409,7 @@ func (scraper *scraper) setCollector() error {
 		}
 		if !invalidPage {
 			value["link"] = requestLink
+			value["rule"] = scraper.rule.Name
 			jsonString, err := json.Marshal(value)
 			if err != nil {
 				log.Println("Validated data is not valid json")
