@@ -286,6 +286,7 @@ func (scraper *scraper) setLinksQueue() error {
 func (scraper *scraper) AddLinkToQueue(url string) {
 	if scraper.FailedTimes > 30 {
 		//give up the url
+		log.Println("Giving up the link:", url)
 		return
 	}
 	if scraper.FailedTimes > 5 {
