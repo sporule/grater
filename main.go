@@ -69,7 +69,7 @@ func scraping() {
 func runAPI() {
 	router := gin.Default()
 	router.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"https://www.dealself.com", "http://127.0.0.1:8080"},
+		AllowOrigins:     []string{utility.GetEnv("CORS", "http://127.0.0.1:8080")},
 		AllowMethods:     []string{"GET"},
 		AllowHeaders:     []string{"Origin"},
 		ExposeHeaders:    []string{"Content-Length"},
