@@ -290,18 +290,11 @@ func (scraper *scraper) setLinksQueue() error {
 }
 
 func (scraper *scraper) addLinkToQueue(url string) {
-	if scraper.failedTimes > 6 {
+	if scraper.failedTimes > 10 {
 		//give up the url
 		log.Println("Giving up the link:", url)
 		return
 	}
-// 	if scraper.failedTimes > 5 {
-// 		if time.Now().Second() >= rand.Intn(30-scraper.failedTimes*2) {
-// 			//The higher the failed times, the higher the chance it will add back to the queue rather than using a cookie
-// 			scraper.queue.AddURL(url)
-// 			return
-// 		}
-// 	}
 	scraper.pendingLinks = append(scraper.pendingLinks, url)
 }
 
@@ -327,7 +320,6 @@ func (scraper *scraper) setCollector() error {
 	}
 
 	c.OnRequest(func(r *colly.Request) {
-		time.Sleep(time.Duration(rand.Int31n(5)) * time.Second)
 		if scraper.headers != nil {
 			for k, v := range scraper.headers {
 				r.Headers.Set(k, v)
@@ -398,12 +390,7 @@ func (scraper *scraper) setCollector() error {
 			}
 			//log.Println("Page layout not as expected,change cookie", requestLink)
 			//change cookie and proxy
-			if time.Now().Second()%5 == 0 {
-				scraper.changeProfile(false, true)
-			} else {
-				scraper.changeProfile(true, true)
-			}
-
+			scraper.changeProfile(true, true)
 			scraper.addLinkToQueue(e.Request.URL.String())
 			return
 		}
@@ -438,11 +425,10 @@ func (scraper *scraper) setCollector() error {
 		//log.Println("Failed HTTP", r.StatusCode, err, r.Request.URL)
 		if r.StatusCode <= 10 {
 			scraper.changeProfile(true, false)
-			scraper.queue.AddURL(r.Request.URL.String())
 		} else {
 			scraper.changeProfile(true, true)
-			scraper.addLinkToQueue(r.Request.URL.String())
 		}
+		scraper.addLinkToQueue(r.Request.URL.String())
 	})
 
 	for len(scraper.proxies) <= 0 && scraper.useProxy {
