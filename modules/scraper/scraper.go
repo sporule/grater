@@ -295,13 +295,13 @@ func (scraper *scraper) addLinkToQueue(url string) {
 		log.Println("Giving up the link:", url)
 		return
 	}
-// 	if scraper.failedTimes > 5 {
-// 		if time.Now().Second() >= rand.Intn(30-scraper.failedTimes*2) {
-// 			//The higher the failed times, the higher the chance it will add back to the queue rather than using a cookie
-// 			scraper.queue.AddURL(url)
-// 			return
-// 		}
-// 	}
+	// 	if scraper.failedTimes > 5 {
+	// 		if time.Now().Second() >= rand.Intn(30-scraper.failedTimes*2) {
+	// 			//The higher the failed times, the higher the chance it will add back to the queue rather than using a cookie
+	// 			scraper.queue.AddURL(url)
+	// 			return
+	// 		}
+	// 	}
 	scraper.pendingLinks = append(scraper.pendingLinks, url)
 }
 
@@ -646,6 +646,7 @@ func getCookieFromRespList(respCookies []string) string {
 //runOneScraper fires of the scraping process
 func runOneScraper(id string) error {
 	log.Println("Scraper started")
+	flag := true
 	scraper, _ := new(id)
 	//Get Rule
 	err := scraper.setRule()
@@ -658,14 +659,14 @@ func runOneScraper(id string) error {
 	scraper.pendingLinks = pendingLinks
 	//get new proxies periodically
 	go func() {
-		for {
+		for flag {
 			scraper.setProxies()
 			time.Sleep(6 * time.Minute)
 		}
 	}()
 	//save data to database very minute
 	go func() {
-		for {
+		for flag {
 			scraper.saveScrapedRecords()
 			time.Sleep(30 * time.Second)
 		}
@@ -702,6 +703,7 @@ func runOneScraper(id string) error {
 	}
 	scraper.setLinksToComplete()
 	scraper.saveScrapedRecords()
+	flag = false //removing those loops
 	log.Println("Scraper Completed")
 	return nil
 }
@@ -711,7 +713,7 @@ func StartScraping() (err error) {
 	scrapersStr := utility.GetEnv("SCRAPERS", "3")
 	scrapers, err := strconv.Atoi(scrapersStr)
 	if err != nil {
-		scrapers = 5
+		scrapers = 3
 	}
 	id, _ := uuid.NewRandom()
 	name := utility.GetEnv("NAME", id.String())

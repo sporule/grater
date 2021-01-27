@@ -54,6 +54,8 @@ func scraping(mode string) {
 			if err != nil {
 				log.Println("error occured, wait for 60 seconds before restart:", err)
 				time.Sleep(60 * time.Second)
+			} else {
+				log.Println("One round completed, starting next round")
 			}
 		}
 	}
