@@ -5,9 +5,11 @@ Grate is designed to be a distributed scraping tool with a rich ui to achieve hi
 
 ## Update
 
+
 ### 2021/01/27
 
 - Optimised the memory use
+- Attached the heartbeat server to scraper as well.
 
 ### 2021/01/26
 

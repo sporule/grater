@@ -14,18 +14,21 @@ import (
 )
 
 //RegisterAPIRoutes registers all api routers
-func RegisterAPIRoutes(router *gin.Engine) {
+func RegisterAPIRoutes(router *gin.Engine, mode string) {
 	r := router.Group("/api/v1")
+	r.GET("/heartbeat", heartbeatController)
 	r.Use(gzip.Gzip(gzip.DefaultCompression))
-	registerEndpoints(r)
-	runTimerJobs()
+	if mode != "scraper" {
+		registerEndpoints(r)
+		runTimerJobs()
+	}
 }
 
 //registerEndpoints register the core end points
 func registerEndpoints(router *gin.RouterGroup) {
 	controllers.InitiateDistRouters(router)
 	controllers.InitiateAdminRouters(router)
-	router.GET("/heartbeat", heartbeatController)
+
 }
 
 func heartbeatController(c *gin.Context) {

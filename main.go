@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/gin-contrib/cors"
@@ -36,37 +37,29 @@ func main() {
 		mode = os.Args[1]
 	}
 
-	switch mode {
-	case "dist":
-		//dist mode only runs distributor
-		runAPI()
-	case "scraper":
+	var wg sync.WaitGroup
+	wg.Add(1)
+
+	go func() {
+		scraping(mode)
+	}()
+	runAPI(mode)
+	wg.Wait()
+}
+
+func scraping(mode string) {
+	if mode != "dist" {
 		for {
-			//scraper mode only runs scraper
-			scraping()
-		}
-	case "both":
-		//both mode runs both distributor and scraper
-		go func() {
-			time.Sleep(5 * time.Second)
-			for {
-				//turn on scraper mode
-				scraping()
+			err := scraper.StartScraping()
+			if err != nil {
+				log.Println("error occured, wait for 60 seconds before restart:", err)
+				time.Sleep(60 * time.Second)
 			}
-		}()
-		runAPI()
+		}
 	}
 }
 
-func scraping() {
-	err := scraper.StartScraping()
-	if err != nil {
-		log.Println("error occured, wait for 60 seconds before restart:", err)
-		time.Sleep(60 * time.Second)
-	}
-}
-
-func runAPI() {
+func runAPI(mode string) {
 	router := gin.Default()
 	router.Use(cors.New(cors.Config{
 		AllowOrigins:     []string{utility.GetEnv("CORS", "http://127.0.0.1:8080")},
@@ -75,6 +68,6 @@ func runAPI() {
 		ExposeHeaders:    []string{"Content-Length"},
 		AllowCredentials: true,
 	}))
-	apiv1.RegisterAPIRoutes(router)
+	apiv1.RegisterAPIRoutes(router, mode)
 	router.Run(":" + utility.GetEnv("PORT", "9999"))
 }
