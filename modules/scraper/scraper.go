@@ -290,18 +290,18 @@ func (scraper *scraper) setLinksQueue() error {
 }
 
 func (scraper *scraper) addLinkToQueue(url string) {
-	if scraper.failedTimes > 10 {
+	if scraper.failedTimes > 6 {
 		//give up the url
 		log.Println("Giving up the link:", url)
 		return
 	}
-	if scraper.failedTimes > 5 {
-		if time.Now().Second() >= rand.Intn(30-scraper.failedTimes*2) {
-			//The higher the failed times, the higher the chance it will add back to the queue rather than using a cookie
-			scraper.queue.AddURL(url)
-			return
-		}
-	}
+// 	if scraper.failedTimes > 5 {
+// 		if time.Now().Second() >= rand.Intn(30-scraper.failedTimes*2) {
+// 			//The higher the failed times, the higher the chance it will add back to the queue rather than using a cookie
+// 			scraper.queue.AddURL(url)
+// 			return
+// 		}
+// 	}
 	scraper.pendingLinks = append(scraper.pendingLinks, url)
 }
 
