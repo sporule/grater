@@ -111,6 +111,9 @@ func GetRulesWithActiveLinks() ([]Rule, error) {
 	if err != nil {
 		return nil, err
 	}
+	if len(links) < 1 {
+		return nil, errors.New("We can't find any links")
+	}
 	index := rand.Intn(len(links))
 	//return a random rule with active links
 	rule, err := GetRule(links[index].RuleID)

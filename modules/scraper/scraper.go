@@ -416,6 +416,8 @@ func (scraper *scraper) setCollector() error {
 				return
 			}
 			scraper.scrapedRecords = append(scraper.scrapedRecords, string(jsonString))
+			//remove item from the map
+			delete(scraper.parentLinks, requestLink)
 			log.Println("Scraped Success:", value)
 		} else {
 			log.Println("Data recevied failed on validation", requestLink)
@@ -598,7 +600,7 @@ func parsePattern(s *goquery.Selection, item map[string]interface{}, parentValue
 //proxyCheck code from https://github.com/asm-jaime/go-proxycheck
 func proxyCheck(proxies []string, proxyType string, testLink string) (validatedProxies []string, cookies []string) {
 	c := make(chan string)
-	timeout := math.Max(float64(len(proxies))*0.02, 10.0)
+	timeout := math.Max(float64(len(proxies))*0.01, 10.0)
 	log.Println("Validating Proxies, it could take:", timeout, "seconds")
 	for _, prox := range proxies {
 		go func(prox string) {
@@ -714,7 +716,7 @@ func StartScraping() (err error) {
 	id, _ := uuid.NewRandom()
 	name := utility.GetEnv("NAME", id.String())
 	errs := make(chan error)
-	for i := 1; i <= scrapers; i++ {
+	for i := 0; i < scrapers; i++ {
 		go func() {
 			errs <- runOneScraper(name)
 		}()
@@ -722,7 +724,7 @@ func StartScraping() (err error) {
 		time.Sleep(time.Duration(rand.Intn(60)) * time.Second)
 	}
 
-	for i := 1; i < scrapers; i++ {
+	for i := 0; i < scrapers; i++ {
 		tempErr := <-errs
 		if tempErr == nil {
 			err = nil

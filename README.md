@@ -5,6 +5,10 @@ Grate is designed to be a distributed scraping tool with a rich ui to achieve hi
 
 ## Update
 
+### 2021/01/27
+
+- Optimised the memory use
+
 ### 2021/01/26
 
 - Optimised the speed
@@ -27,7 +31,7 @@ Grate is designed to be a distributed scraping tool with a rich ui to achieve hi
 - [ ] Basic Admin Panel to control the rules
 - [ ] Basic Docker-Compose file
 - [ ] Basic Helm Chart
-- [ ] Optimise the memory usage
+- [x] Optimise the memory usage
 - [x] Basic Docker Image
 - [x] API to return results
 - [x] Multiple Scraper Instances per node

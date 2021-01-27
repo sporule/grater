@@ -11,9 +11,11 @@
             "mode": "auto",
             "program": "${workspaceRoot}/main.go",
             "env": { 
-                "PROXY_API":"http%https://api.proxyscrape.com/v2/?request=getproxies&protocol=http&timeout=10000&country=all&ssl=all&anonymity=all"
+                "PROXY_API":"http%https://api.proxyscrape.com/v2/?request=getproxies&protocol=http&timeout=10000&country=all&ssl=all&anonymity=all",
+                "SCRAPERS":"10",
+                "ISCOOLDOWN":"1"
             },
-            "args": ["dist"]
+            "args": ["both"]
         }
     ]
 }

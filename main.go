@@ -2,6 +2,8 @@ package main
 
 import (
 	"log"
+	"net/http"
+	_ "net/http/pprof"
 	"os"
 	"time"
 
@@ -14,6 +16,10 @@ import (
 )
 
 func main() {
+
+	go func() {
+		log.Println(http.ListenAndServe("localhost:6060", nil))
+	}()
 
 	//initiate database
 	if uri, dbName := utility.GetEnv("CONNECTION_URI", "mongodb://root:example@mongo:27017/"), utility.GetEnv("DATABASE_NAME", "grater"); !utility.IsNil(uri, dbName) {
