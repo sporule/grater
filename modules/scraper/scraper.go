@@ -670,8 +670,8 @@ func runOneScraper(id string) error {
 		scraper.previousPendingLinksSize = len(scraper.pendingLinks)
 		coolDownDelay := rand.Int31n(int32(math.Max(float64(len(scraper.pendingLinks)), 60)))
 		if utility.GetEnv("ISCOOLDOWN", "") == "" {
-			//set cooldown to 5 if it is disabled
-			coolDownDelay = 5
+			//set cooldown to 1 if it is disabled
+			coolDownDelay = 1
 		}
 		log.Println("Refreshing collector,queue,proxies and cookies,sleep for ", coolDownDelay, "seconds. Size of Links:", len(scraper.pendingLinks), "Total Failed Time:", scraper.failedTimes)
 		time.Sleep(time.Duration(coolDownDelay) * time.Second)
@@ -704,33 +704,19 @@ func StartScraping() (err error) {
 	id, _ := uuid.NewRandom()
 	name := utility.GetEnv("NAME", id.String())
 	errs := make(chan error)
-	for i := 0; i < scrapers; i++ {
+	for i := 1; i <= scrapers; i++ {
 		go func() {
 			errs <- runOneScraper(name)
 		}()
 		//random delay before running the next scraper
 		time.Sleep(time.Duration(rand.Intn(60)) * time.Second)
 	}
-	go func(){
-		timeoutStr:=utility.GetEnv("SCRAPERTIMEOUT", "30")
-		timeout, err:=strconv.Atoi(timeoutStr)
-		if err != nil{
-			timeout = 30
-		}
-		time.Sleep(time.Duration(timeout) * time.Minute)
-		errs <- errors.New("Scraper timeout")
-	}()
 
-	for i := 0; i < scrapers; i++ {
+	for i := 1; i < scrapers; i++ {
 		tempErr := <-errs
-		if tempErr.Error()=="Scraper timeout"{
-			close(errs)
-			return tempErr
-		}
 		if tempErr == nil {
 			err = nil
 		}
 	}
-	close(errs)
 	return err
 }
