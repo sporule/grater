@@ -719,7 +719,7 @@ func StartScraping() (err error) {
 		}
 		time.Sleep(timeout * time.Minute)
 		errs <- errors.New("Scraper timeout")
-	}
+	}()
 
 	for i := 0; i < scrapers; i++ {
 		tempErr := <-errs
