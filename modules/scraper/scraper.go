@@ -670,8 +670,8 @@ func runOneScraper(id string) error {
 		scraper.previousPendingLinksSize = len(scraper.pendingLinks)
 		coolDownDelay := rand.Int31n(int32(math.Max(float64(len(scraper.pendingLinks)), 60)))
 		if utility.GetEnv("ISCOOLDOWN", "") == "" {
-			//disable cooldown function
-			coolDownDelay = 0
+			//set minimum cooldown of 10 seconds
+			coolDownDelay = 10
 		}
 		log.Println("Refreshing collector,queue,proxies and cookies,sleep for ", coolDownDelay, "seconds. Size of Links:", len(scraper.pendingLinks), "Total Failed Time:", scraper.failedTimes)
 		time.Sleep(time.Duration(coolDownDelay) * time.Second)
