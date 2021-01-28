@@ -717,7 +717,7 @@ func StartScraping() (err error) {
 		if err != nil{
 			timeout = 30
 		}
-		time.Sleep(timeout * time.Minute)
+		time.Sleep(time.Duration(timeout) * time.Minute)
 		errs <- errors.New("Scraper timeout")
 	}()
 
