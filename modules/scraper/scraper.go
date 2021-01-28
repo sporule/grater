@@ -724,13 +724,13 @@ func StartScraping() (err error) {
 	for i := 0; i < scrapers; i++ {
 		tempErr := <-errs
 		if tempErr.Error()=="Scraper timeout"{
-			close(tempErr)
+			close(errs)
 			return tempErr
 		}
 		if tempErr == nil {
 			err = nil
 		}
 	}
-	close(tempErr)
+	close(errs)
 	return err
 }
