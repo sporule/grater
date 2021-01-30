@@ -48,6 +48,7 @@ func main() {
 }
 
 func scraping(mode string) {
+	time.Sleep(3 * time.Second)
 	if mode != "dist" {
 		for {
 			err := scraper.StartScraping()
