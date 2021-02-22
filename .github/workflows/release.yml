@@ -12,45 +12,28 @@ jobs:
     runs-on: ubuntu-latest
     steps:
 
-    - name: Set up Go 1.x
+    - name: Set up Go
       uses: actions/setup-go@v2
-      with:
-        go-version: ^1.13
-      id: go
 
     - name: Check out code into the Go module directory
       uses: actions/checkout@v2
 
-    - name: Get dependencies
-      run: |
-        go get -v -t -d ./...
-        if [ -f Gopkg.toml ]; then
-            curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
-            dep ensure
-        fi
-    
-    - name: Test
-      run: go test -v .
-
     - name: Build Binaries
       run: |
-        env GOOS=windows GOARCH=386 go build -v -o ./windows/data-basket.exe .
-        cp config.json ./windows/
-        env GOOS=linux GOARCH=386 go build -v -o ./linux/data-basket .
-        cp config.json ./linux/
-        env GOOS=darwin GOARCH=386 go build -v -o ./mac/data-basket .
-        cp config.json ./mac/
+        env GOOS=windows GOARCH=386 go build -v -o ./windows/grater.exe .
+        env GOOS=linux GOARCH=386 go build -v -o ./linux/grater .
+        env GOOS=darwin GOARCH=386 go build -v -o ./mac/grater .
     
     - name: Create Zip Release Files
       uses: montudor/action-zip@v0.1.0
       with:
-        args:  zip -qq -r ./data-basket-windows.zip ./windows
+        args:  zip -qq -r ./grater-windows.zip ./windows
     - uses: montudor/action-zip@v0.1.0
       with:
-        args:  zip -qq -r ./data-basket-linux.zip ./linux
+        args:  zip -qq -r ./grater-linux.zip ./linux
     - uses: montudor/action-zip@v0.1.0
       with:
-        args:  zip -qq -r ./data-basket-mac.zip ./mac
+        args:  zip -qq -r ./grater-mac.zip ./mac
     
     - name: Create Release
       id: create_release
@@ -69,8 +52,8 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./data-basket-windows.zip
-        asset_name: data-basket-windows.zip
+        asset_path: ./grater-windows.zip
+        asset_name: grater-windows.zip
         asset_content_type: application/zip
     
     - name: Upload Linux Release Asset 
@@ -79,8 +62,8 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }} 
-        asset_path: ./data-basket-linux.zip
-        asset_name: data-basket-linux.zip
+        asset_path: ./grater-linux.zip
+        asset_name: grater-linux.zip
         asset_content_type: application/zip
         
     - name: Upload Mac Release Asset
@@ -89,6 +72,6 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./data-basket-mac.zip
-        asset_name: data-basket-mac.zip
+        asset_path: ./grater-mac.zip
+        asset_name: grater-mac.zip
         asset_content_type: application/zip
