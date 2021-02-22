@@ -20,9 +20,9 @@ jobs:
 
     - name: Build Binaries
       run: |
-        env GOOS=windows GOARCH=386 go build -v -o ./windows/grater.exe .
-        env GOOS=linux GOARCH=386 go build -v -o ./linux/grater .
-        env GOOS=darwin GOARCH=386 go build -v -o ./mac/grater .
+        env GOOS=windows GOARCH=amd64 go build -v -o ./windows/grater.exe .
+        env GOOS=linux GOARCH=amd64 go build -v -o ./linux/grater .
+        env GOOS=darwin GOARCH=amd64 go build -v -o ./mac/grater .
     
     - name: Create Zip Release Files
       uses: montudor/action-zip@v0.1.0
