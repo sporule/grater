@@ -1,8 +1,10 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"os"
+	"runtime"
 	"sync"
 	"time"
 
@@ -51,6 +53,8 @@ func scraping(mode string) {
 	time.Sleep(3 * time.Second)
 	if mode != "dist" {
 		for {
+			log.Println("Started new scraping round, current size of go routine:", runtime.NumGoroutine())
+			PrintMemUsage()
 			err := scraper.StartScraping()
 			if err != nil {
 				log.Println("error occured, wait for 60 seconds before restart:", err)
@@ -65,7 +69,7 @@ func scraping(mode string) {
 func runAPI(mode string) {
 	router := gin.Default()
 	router.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{utility.GetEnv("CORS", "http://127.0.0.1:8080"),utility.GetEnv("CORS2", "http://127.0.0.1:8080")},
+		AllowOrigins:     []string{utility.GetEnv("CORS", "http://127.0.0.1:8080"), utility.GetEnv("CORS2", "http://127.0.0.1:8080")},
 		AllowMethods:     []string{"GET"},
 		AllowHeaders:     []string{"Origin"},
 		ExposeHeaders:    []string{"Content-Length"},
@@ -73,4 +77,19 @@ func runAPI(mode string) {
 	}))
 	apiv1.RegisterAPIRoutes(router, mode)
 	router.Run(":" + utility.GetEnv("PORT", "9999"))
+}
+
+//PrintMemUsage a
+func PrintMemUsage() {
+	var m runtime.MemStats
+	runtime.ReadMemStats(&m)
+	// For info on each, see: https://golang.org/pkg/runtime/#MemStats
+	fmt.Printf("go routine Alloc = %v MiB", bToMb(m.Alloc))
+	fmt.Printf("\tgo routine TotalAlloc = %v MiB", bToMb(m.TotalAlloc))
+	fmt.Printf("\tgo routine Sys = %v MiB", bToMb(m.Sys))
+	fmt.Printf("\tgo routine NumGC = %v\n", m.NumGC)
+}
+
+func bToMb(b uint64) uint64 {
+	return b / 1024 / 1024
 }
