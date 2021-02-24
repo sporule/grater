@@ -65,7 +65,7 @@ func scraping(mode string) {
 func runAPI(mode string) {
 	router := gin.Default()
 	router.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{utility.GetEnv("CORS", "http://127.0.0.1:8080")},
+		AllowOrigins:     []string{utility.GetEnv("CORS", "http://127.0.0.1:8080"),utility.GetEnv("CORS2", "http://127.0.0.1:8080")},
 		AllowMethods:     []string{"GET"},
 		AllowHeaders:     []string{"Origin"},
 		ExposeHeaders:    []string{"Content-Length"},
