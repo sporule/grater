@@ -1,1 +1,1 @@
-web: bin/grater
+web: grater
