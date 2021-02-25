@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"go/token"
 	"go/types"
 	"io/ioutil"
@@ -13,7 +12,6 @@ import (
 	"math/rand"
 	"net/http"
 	"net/url"
-	"runtime"
 	"sync"
 	"time"
 
@@ -136,8 +134,12 @@ func (scraper *scraper) getCookie() string {
 func (scraper *scraper) setProxies() error {
 	log.Println("Getting Proxies")
 	proxyAPIStr := utility.GetEnv("PROXY_API", "socks5-grater-https://api.proxyscrape.com/v2/?request=getproxies&protocol=socks5&timeout=10000&country=all")
-	proxyProtocol := strings.Split(proxyAPIStr, "-grater-")[0]
-	proxyLink := strings.Split(proxyAPIStr, "-grater-")[1]
+	proxyAPISlice := strings.Split(proxyAPIStr, "-grater-")
+	if len(proxyAPISlice) <= 1 {
+		return errors.New("Can't read proxy configuration, disabling proxy")
+	}
+	proxyProtocol := proxyAPISlice[0]
+	proxyLink := proxyAPISlice[1]
 	testLink := strings.Join(strings.Split(scraper.rule.LinkPattern, "/")[:3], "/")
 	if utility.IsNil(proxyProtocol, proxyLink, testLink) {
 		return errors.New("Can't read proxy configuration, disabling proxy")
@@ -675,7 +677,6 @@ func runOneScraper(id string) error {
 			//set cooldown to 1 if it is disabled
 			coolDownDelay = 1
 		}
-		PrintMemUsage()
 		log.Println("Refreshing collector,queue,proxies and cookies,sleep for ", coolDownDelay, "seconds. Size of Links:", len(scraper.pendingLinks), "Total Failed Time:", scraper.failedTimes)
 		time.Sleep(time.Duration(coolDownDelay) * time.Second)
 		scraper.setCollector()
@@ -713,32 +714,14 @@ func StartScraping() (err error) {
 		}()
 		//random delay before running the next scraper
 		time.Sleep(time.Duration(rand.Intn(60)) * time.Second)
-		log.Println("Started a new scraper, current size of go routine:", runtime.NumGoroutine())
-		PrintMemUsage()
 	}
 
 	for i := 1; i <= scrapers; i++ {
 		tempErr := <-errs
-		log.Println("Finished a scraper, current size of go routine:", runtime.NumGoroutine())
 		if tempErr == nil {
 			err = nil
 		}
 
 	}
 	return err
-}
-
-//PrintMemUsage a
-func PrintMemUsage() {
-	var m runtime.MemStats
-	runtime.ReadMemStats(&m)
-	// For info on each, see: https://golang.org/pkg/runtime/#MemStats
-	fmt.Printf("go routine Alloc = %v MiB", bToMb(m.Alloc))
-	fmt.Printf("\tgo routine TotalAlloc = %v MiB", bToMb(m.TotalAlloc))
-	fmt.Printf("\tgo routine Sys = %v MiB", bToMb(m.Sys))
-	fmt.Printf("\tgo routine NumGC = %v\n", m.NumGC)
-}
-
-func bToMb(b uint64) uint64 {
-	return b / 1024 / 1024
 }
