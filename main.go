@@ -32,7 +32,7 @@ func main() {
 		gin.SetMode(gin.ReleaseMode)
 	}
 	//default to run on both mode
-	mode := "both"
+	mode := utility.GetEnv("MODE", "both")
 	if len(os.Args) > 1 {
 		mode = os.Args[1]
 	}
