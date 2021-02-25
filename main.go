@@ -49,7 +49,7 @@ func main() {
 
 func scraping(mode string) {
 	time.Sleep(3 * time.Second)
-	if mode != "dist" {
+	if mode != "dist" && mode != "api" {
 		for {
 			err := scraper.StartScraping()
 			if err != nil {
