@@ -448,7 +448,8 @@ func (scraper *scraper) setCollector() error {
 
 func (scraper *scraper) proxySwitcher(pr *http.Request) (*url.URL, error) {
 	for len(scraper.proxies) <= 0 {
-		time.Sleep(1 * time.Second)
+		log.Println("Proxy switcher is waiting for proxy, sleep for 5 seconds")
+		time.Sleep(5 * time.Second)
 	}
 	proxyStr := scraper.proxies[0] //always return the first proxy
 	proxy := &url.URL{Scheme: strings.Split(proxyStr, "://")[0], Host: strings.Split(proxyStr, "://")[1]}
@@ -691,7 +692,11 @@ func runOneScraper(id string) error {
 		}
 		scraper.queue.Run(scraper.collector)
 	}
-	scraper.setLinksToComplete()
+	err = scraper.setLinksToComplete()
+	if err != nil {
+		log.Println("Set Links to Complete failed:", err)
+	}
+	log.Println("Link set to completed")
 	scraper.saveScrapedRecords()
 	flag = false //removing those loops
 	log.Println("Scraper Completed")
