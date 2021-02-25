@@ -675,12 +675,14 @@ func runOneScraper(id string) error {
 		scraper.previousPendingLinksSize = len(scraper.pendingLinks)
 		coolDownDelay := rand.Int31n(int32(math.Max(float64(len(scraper.pendingLinks)), 60)))
 		if utility.GetEnv("ISCOOLDOWN", "") == "" {
-			//set cooldown to 1 if it is disabled
-			coolDownDelay = 1
+			//set cooldown to 5 if it is disabled
+			coolDownDelay = 10
 		}
 		log.Println("Refreshing collector,queue,proxies and cookies,sleep for ", coolDownDelay, "seconds. Size of Links:", len(scraper.pendingLinks), "Total Failed Time:", scraper.failedTimes)
 		time.Sleep(time.Duration(coolDownDelay) * time.Second)
+		log.Println("Setting collector")
 		scraper.setCollector()
+		log.Println("Setting links queue")
 		err = scraper.setLinksQueue()
 		if !utility.IsNil(err) {
 			return err
@@ -690,6 +692,7 @@ func runOneScraper(id string) error {
 			log.Println("Waiting for collector to be ready")
 			time.Sleep(10 * time.Second)
 		}
+		log.Println("SStart running the collector")
 		scraper.queue.Run(scraper.collector)
 	}
 	err = scraper.setLinksToComplete()
