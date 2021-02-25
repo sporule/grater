@@ -20,7 +20,9 @@ func RegisterAPIRoutes(router *gin.Engine, mode string) {
 	r.Use(gzip.Gzip(gzip.DefaultCompression))
 	if mode != "scraper" {
 		registerEndpoints(r)
-		runTimerJobs()
+		if mode != "api" {
+			runTimerJobs()
+		}
 	}
 }
 
