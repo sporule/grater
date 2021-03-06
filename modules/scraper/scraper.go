@@ -720,6 +720,10 @@ func StartScraping() (err error) {
 		go func() {
 			errs <- runOneScraper(name)
 		}()
+		go func() {
+			time.Sleep(15 * time.Minute)
+			errs <- nil
+		}()
 		//random delay before running the next scraper
 		time.Sleep(time.Duration(rand.Intn(60)) * time.Second)
 	}
@@ -729,7 +733,7 @@ func StartScraping() (err error) {
 		if tempErr == nil {
 			err = nil
 		}
-
 	}
+	errs = nil
 	return err
 }
