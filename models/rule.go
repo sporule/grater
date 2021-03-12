@@ -107,16 +107,23 @@ func GetRules(filtersMap map[string]interface{}, page int) ([]Rule, error) {
 //GetRulesWithActiveLinks returns rules with active link, it returns a slice but with only 1 item
 func GetRulesWithActiveLinks() ([]Rule, error) {
 	var rules []Rule
-	links, err := GetLinks("", "Active", 1)
+	links, err := GetLinks("", "Active", 0)
 	if err != nil {
 		return nil, err
 	}
 	if len(links) < 1 {
 		return nil, errors.New("We can't find any links")
 	}
-	index := rand.Intn(len(links))
+	ruleIds := []string{}
+	for _, link := range links {
+		if !strings.Contains(strings.Join(ruleIds, ","), link.RuleID) {
+			ruleIds = append(ruleIds, link.RuleID)
+		}
+	}
+	rand.Seed(time.Now().Unix())
+	index := rand.Intn(len(ruleIds))
 	//return a random rule with active links
-	rule, err := GetRule(links[index].RuleID)
+	rule, err := GetRule(ruleIds[index])
 	rules = append(rules, *rule) // return a list because of lazy
 	return rules, err
 }
