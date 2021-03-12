@@ -232,7 +232,7 @@ func (scraper *scraper) setRule() error {
 		rule := rules[0]
 		if utility.IsNil(rule.ID, rule.Pattern, rule.TargetLocation) {
 			log.Println("Unable to read rule information")
-			return errors.New("Unable to read rule information")
+			return errors.New("Unable to read rule information.")
 		}
 		scraper.rule = rule
 	} else {
